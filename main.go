@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/NYTimes/gziphandler" // For gzip compression
+	"github.com/andybalholm/brotli" // For Brotli compression
 )
 
 // cacheControlMiddleware sets appropriate Cache-Control headers for static assets.
@@ -117,6 +118,46 @@ func createSpaHandler(staticDir string) http.Handler {
 	})
 }
 
+// brotliResponseWriter is a wrapper around http.ResponseWriter that compresses data with Brotli.
+type brotliResponseWriter struct {
+	http.ResponseWriter
+	brotliWriter *brotli.Writer
+	wroteHeader  bool
+}
+
+func (brw *brotliResponseWriter) Write(data []byte) (int, error) {
+	if !brw.wroteHeader {
+		brw.WriteHeader(http.StatusOK) // Ensure headers are written before first write
+	}
+	return brw.brotliWriter.Write(data)
+}
+
+func (brw *brotliResponseWriter) WriteHeader(statusCode int) {
+	if brw.wroteHeader {
+		return
+	}
+	brw.ResponseWriter.Header().Set("Content-Encoding", "br")
+	brw.ResponseWriter.Header().Set("Vary", "Accept-Encoding")
+	brw.ResponseWriter.WriteHeader(statusCode)
+	brw.wroteHeader = true
+}
+
+// brotliHandler compresses responses with Brotli if the client supports it.
+func brotliHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "br") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		brWriter := brotli.NewWriter(w)
+		defer brWriter.Close()
+
+		brw := &brotliResponseWriter{ResponseWriter: w, brotliWriter: brWriter}
+		next.ServeHTTP(brw, r)
+	})
+}
+
 func setupHandlers() http.Handler {
 	staticDir := getStaticDir()
 
@@ -125,8 +166,11 @@ func setupHandlers() http.Handler {
 	// Apply caching middleware
 	cachedSPAHandler := cacheControlMiddleware(spaHandler)
 
-	// Apply gzip compression middleware
-	finalHandler := gziphandler.GzipHandler(cachedSPAHandler)
+	// Apply Brotli compression middleware (prioritized)
+	brotliCompressedHandler := brotliHandler(cachedSPAHandler)
+
+	// Apply Gzip compression middleware (fallback)
+	finalHandler := gziphandler.GzipHandler(brotliCompressedHandler)
 
 	return finalHandler
 }

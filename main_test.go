@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NYTimes/gziphandler"
+	"github.com/andybalholm/brotli"
 )
 
 func TestSpaHandler(t *testing.T) {
@@ -297,23 +297,57 @@ func TestCacheControlMiddleware(t *testing.T) {
 	}
 }
 
-func TestGzipCompression(t *testing.T) {
-	// Create a dummy handler that serves some content
-	dummyContent := strings.Repeat("This is some content to be gzipped. ", 100) // Make it larger than 1400 bytes
-	dummyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte(dummyContent))
-	})
+func TestCompression(t *testing.T) {
+	// Temporarily set STATIC_DIR to a known value for testing
+	os.Setenv("STATIC_DIR", "./static")
+	defer os.Unsetenv("STATIC_DIR")
 
-	// Apply the gzip handler
-	gzippedHandler := gziphandler.GzipHandler(dummyHandler)
+	// Create a temporary large file for testing compression
+	largeContent := strings.Repeat("a", 2000) // Content larger than typical compression threshold
+	tempFilePath := filepath.Join("./static", "temp_large_file.txt")
+	err := ioutil.WriteFile(tempFilePath, []byte(largeContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to create temporary file: %v", err)
+	}
+	defer os.Remove(tempFilePath) // Clean up the temporary file
 
-	t.Run("should gzip content when Accept-Encoding is gzip", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/", nil)
-		req.Header.Set("Accept-Encoding", "gzip")
+	handler := setupHandlers() // Test the full handler chain
+
+	t.Run("should apply Brotli compression when Accept-Encoding is br", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/temp_large_file.txt", nil)
+		req.Header.Set("Accept-Encoding", "br")
 		rr := httptest.NewRecorder()
 
-		gzippedHandler.ServeHTTP(rr, req)
+		handler.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		}
+
+		contentEncoding := rr.Header().Get("Content-Encoding")
+		if contentEncoding != "br" {
+			t.Errorf("Content-Encoding header mismatch: got %q, want %q", contentEncoding, "br")
+		}
+
+		// Decompress the body to verify content
+		brReader := brotli.NewReader(rr.Body)
+
+		decompressedBody, err := ioutil.ReadAll(brReader)
+		if err != nil {
+			t.Fatalf("failed to decompress body with Brotli: %v", err)
+		}
+
+		if string(decompressedBody) != largeContent {
+			t.Errorf("decompressed body mismatch: got %q, want %q", string(decompressedBody), largeContent)
+		}
+	})
+
+	t.Run("should apply Gzip compression when Accept-Encoding is gzip (and no br)", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/temp_large_file.txt", nil)
+		req.Header.Set("Accept-Encoding", "gzip") // Only gzip
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
 
 		if status := rr.Code; status != http.StatusOK {
 			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -325,27 +359,27 @@ func TestGzipCompression(t *testing.T) {
 		}
 
 		// Decompress the body to verify content
-		reader, err := gzip.NewReader(rr.Body)
+		gzipReader, err := gzip.NewReader(rr.Body)
 		if err != nil {
 			t.Fatalf("failed to create gzip reader: %v", err)
 		}
-		defer reader.Close()
+		defer gzipReader.Close()
 
-		decompressedBody, err := ioutil.ReadAll(reader)
+		decompressedBody, err := ioutil.ReadAll(gzipReader)
 		if err != nil {
-			t.Fatalf("failed to decompress body: %v", err)
+			t.Fatalf("failed to decompress body with Gzip: %v", err)
 		}
 
-		if string(decompressedBody) != dummyContent {
-			t.Errorf("decompressed body mismatch: got %q, want %q", string(decompressedBody), dummyContent)
+		if string(decompressedBody) != largeContent {
+			t.Errorf("decompressed body mismatch: got %q, want %q", string(decompressedBody), largeContent)
 		}
 	})
 
-	t.Run("should not gzip content when Accept-Encoding is not gzip", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/", nil)
+	t.Run("should not apply compression when Accept-Encoding is not present", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/temp_large_file.txt", nil)
 		rr := httptest.NewRecorder()
 
-		gzippedHandler.ServeHTTP(rr, req)
+		handler.ServeHTTP(rr, req)
 
 		if status := rr.Code; status != http.StatusOK {
 			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -356,8 +390,8 @@ func TestGzipCompression(t *testing.T) {
 			t.Errorf("Content-Encoding header should be empty, got %q", contentEncoding)
 		}
 
-		if rr.Body.String() != dummyContent {
-			t.Errorf("body mismatch: got %q, want %q", rr.Body.String(), dummyContent)
+		if rr.Body.String() != largeContent {
+			t.Errorf("body mismatch: got %q, want %q", rr.Body.String(), largeContent)
 		}
 	})
 }
