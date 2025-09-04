@@ -63,4 +63,5 @@ done
 # Run the e2e tests
 echo "Running e2e tests..."
 cd client
+npx playwright install --with-deps
 npx playwright test
