@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	
 
 	"github.com/NYTimes/gziphandler" // For gzip compression
 )
@@ -44,28 +43,34 @@ func getStaticDir() string {
 	return staticDir
 }
 
-func main() {
-	staticDir := getStaticDir()
+// startServer encapsulates the server startup logic.
+func startServer(addr string, handler http.Handler) error {
+	log.Printf("Listening on %s...", addr)
+	return http.ListenAndServe(addr, handler)
+}
 
-	// The file server for static assets
+// runApp sets up and starts the HTTP server.
+// createSpaHandler creates an http.Handler that serves static files
+// and falls back to index.html for client-side routes.
+func createSpaHandler(staticDir string) http.Handler {
 	fs := http.FileServer(http.Dir(staticDir))
 
-	// Create a handler that serves the SPA, applying caching and gzip
-	spaHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Construct the path to the requested file in the static directory
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		filePath := filepath.Join(staticDir, r.URL.Path)
 
-		// Check if a file exists at the constructed path.
-		// If not, it's likely a client-side route.
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			// File does not exist, serve index.html
 			http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
 			return
 		}
 
-		// File exists, let the file server handle it.
 		fs.ServeHTTP(w, r)
 	})
+}
+
+func setupHandlers() http.Handler {
+	staticDir := getStaticDir()
+
+	spaHandler := createSpaHandler(staticDir)
 
 	// Apply caching middleware
 	cachedSPAHandler := cacheControlMiddleware(spaHandler)
@@ -73,12 +78,17 @@ func main() {
 	// Apply gzip compression middleware
 	finalHandler := gziphandler.GzipHandler(cachedSPAHandler)
 
-	// Register the final handler
-	http.Handle("/", finalHandler)
+	return finalHandler
+}
 
-	log.Println("Listening on :8080...")
-	err := http.ListenAndServe(":8080", nil)
-	if err != nil {
+func runApp() error {
+	finalHandler := setupHandlers()
+	http.Handle("/", finalHandler)
+	return startServer(":8080", nil)
+}
+
+func main() {
+	if err := runApp(); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -13,35 +13,9 @@ import (
 	"github.com/NYTimes/gziphandler"
 )
 
-// spaHandler serves a single-page application.
-// It serves static files from the staticDir, and for any path that doesn't match a file,
-// it serves the index.html file.
-// NOTE: This is the original spaHandler from main_test.go, not the one from main.go
-// as main.go's logic is now embedded in the main function's handler setup.
-func spaHandler(staticDir string) http.Handler {
-	// The file server for static assets
-	fs := http.FileServer(http.Dir(staticDir))
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Construct the path to the requested file in the static directory
-		filePath := filepath.Join(staticDir, r.URL.Path)
-
-		// Check if a file exists at the constructed path.
-		// If not, it's likely a client-side route.
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			// File does not exist, serve index.html
-			http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
-			return
-		}
-
-		// File exists, let the file server handle it.
-		fs.ServeHTTP(w, r)
-	})
-}
-
 func TestSpaHandler(t *testing.T) {
 	// The handler to test
-	handler := spaHandler("./static")
+	handler := createSpaHandler("./static")
 
 	// --- Test Cases ---
 
@@ -270,6 +244,94 @@ func TestGetStaticDir(t *testing.T) {
 		expected := "./client/dist"
 		if dir != expected {
 			t.Errorf("getStaticDir() returned %q, want %q when STATIC_DIR is not set", dir, expected)
+		}
+	})
+}
+
+func TestStartServer(t *testing.T) {
+	// Create a dummy handler
+	dummyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	t.Run("server fails to start with invalid address", func(t *testing.T) {
+		// Call startServer with an invalid address that will cause ListenAndServe to fail immediately
+		err := startServer(":invalid_port", dummyHandler)
+		if err == nil {
+			t.Errorf("startServer() did not return an error for invalid address")
+		}
+	})
+}
+
+func TestSetupHandlers(t *testing.T) {
+	// Temporarily set STATIC_DIR to a known value for testing
+	os.Setenv("STATIC_DIR", "./static")
+	defer os.Unsetenv("STATIC_DIR")
+
+	handler := setupHandlers()
+
+	t.Run("should apply cache control headers for assets", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/assets/some.js", nil)
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		cacheControl := rr.Header().Get("Cache-Control")
+		expected := "public, max-age=31536000, immutable"
+		if cacheControl != expected {
+			t.Errorf("Cache-Control header mismatch: got %q, want %q", cacheControl, expected)
+		}
+	})
+
+	t.Run("should apply no-cache for index.html", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/index.html", nil)
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		cacheControl := rr.Header().Get("Cache-Control")
+		expected := "no-cache, no-store, must-revalidate"
+		if cacheControl != expected {
+			t.Errorf("Cache-Control header mismatch: got %q, want %q", cacheControl, expected)
+		}
+		if rr.Header().Get("Pragma") != "no-cache" {
+			t.Errorf("Pragma header mismatch: got %q, want %q", rr.Header().Get("Pragma"), "no-cache")
+		}
+		if rr.Header().Get("Expires") != "0" {
+			t.Errorf("Expires header mismatch: got %q, want %q", rr.Header().Get("Expires"), "0")
+		}
+	})
+
+	t.Run("should gzip content when Accept-Encoding is gzip", func(t *testing.T) {
+		// Create a temporary large file for testing gzip
+		largeContent := strings.Repeat("a", 2000) // Content larger than typical gzip threshold
+		tempFilePath := filepath.Join("./static", "temp_large_file.txt")
+		err := ioutil.WriteFile(tempFilePath, []byte(largeContent), 0644)
+		if err != nil {
+			t.Fatalf("failed to create temporary file: %v", err)
+		}
+		defer os.Remove(tempFilePath) // Clean up the temporary file
+
+		req := httptest.NewRequest("GET", "/temp_large_file.txt", nil) // Request the temporary file
+		req.Header.Set("Accept-Encoding", "gzip")
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		contentEncoding := rr.Header().Get("Content-Encoding")
+		if contentEncoding != "gzip" {
+			t.Errorf("Content-Encoding header mismatch: got %q, want %q", contentEncoding, "gzip")
+		}
+
+		// Verify content is gzipped by attempting to decompress
+		reader, err := gzip.NewReader(rr.Body)
+		if err != nil {
+			t.Fatalf("failed to create gzip reader: %v", err)
+		}
+		defer reader.Close()
+		decompressedBody, err := ioutil.ReadAll(reader)
+		if err != nil {
+			t.Fatalf("failed to decompress body: %v", err)
+		}
+		if string(decompressedBody) != largeContent {
+			t.Errorf("decompressed body mismatch: got %q, want %q", string(decompressedBody), largeContent)
 		}
 	})
 }
