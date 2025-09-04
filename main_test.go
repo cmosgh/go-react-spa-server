@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -8,11 +9,15 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/NYTimes/gziphandler"
 )
 
 // spaHandler serves a single-page application.
 // It serves static files from the staticDir, and for any path that doesn't match a file,
 // it serves the index.html file.
+// NOTE: This is the original spaHandler from main_test.go, not the one from main.go
+// as main.go's logic is now embedded in the main function's handler setup.
 func spaHandler(staticDir string) http.Handler {
 	// The file server for static assets
 	fs := http.FileServer(http.Dir(staticDir))
@@ -106,6 +111,143 @@ func TestSpaHandler(t *testing.T) {
 
 		if rr.Body.Len() == 0 {
 			t.Errorf("body of JS asset should not be empty")
+		}
+	})
+}
+
+func TestCacheControlMiddleware(t *testing.T) {
+	// A dummy handler to pass to the middleware
+	dummyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	tests := []struct {
+		name        string
+		path        string
+		expected    string
+		notExpected string
+	}{
+		{
+			name:     "hashed JS asset",
+			path:     "/assets/index-CtS_vSNO.js",
+			expected: "public, max-age=31536000, immutable",
+		},
+		{
+			name:     "CSS asset",
+			path:     "/style.css",
+			expected: "public, max-age=31536000, immutable",
+		},
+		{
+			name:     "PNG image asset",
+			path:     "/image.png",
+			expected: "public, max-age=31536000, immutable",
+		},
+		{
+			name:     "root path",
+			path:     "/",
+			expected: "no-cache, no-store, must-revalidate",
+		},
+		{
+			name:     "index.html path",
+			path:     "/index.html",
+			expected: "no-cache, no-store, must-revalidate",
+		},
+		{
+			name:        "non-asset path",
+			path:        "/api/data",
+			notExpected: "max-age", // Should not have a cache-control header set by this middleware
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", tt.path, nil)
+			rr := httptest.NewRecorder()
+
+			handler := cacheControlMiddleware(dummyHandler)
+			handler.ServeHTTP(rr, req)
+
+			cacheControl := rr.Header().Get("Cache-Control")
+			if tt.expected != "" && cacheControl != tt.expected {
+				t.Errorf("Cache-Control header mismatch for %s: got %q, want %q", tt.path, cacheControl, tt.expected)
+			}
+			if tt.notExpected != "" && strings.Contains(cacheControl, tt.notExpected) {
+				t.Errorf("Cache-Control header should not contain %q for %s, but got %q", tt.notExpected, tt.path, cacheControl)
+			}
+
+			if strings.Contains(tt.expected, "no-cache") {
+				if rr.Header().Get("Pragma") != "no-cache" {
+					t.Errorf("Pragma header mismatch for %s: got %q, want %q", tt.path, rr.Header().Get("Pragma"), "no-cache")
+				}
+				if rr.Header().Get("Expires") != "0" {
+					t.Errorf("Expires header mismatch for %s: got %q, want %q", tt.path, rr.Header().Get("Expires"), "0")
+				}
+			}
+		})
+	}
+}
+
+func TestGzipCompression(t *testing.T) {
+	// Create a dummy handler that serves some content
+	dummyContent := strings.Repeat("This is some content to be gzipped. ", 100) // Make it larger than 1400 bytes
+	dummyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte(dummyContent))
+	})
+
+	// Apply the gzip handler
+	gzippedHandler := gziphandler.GzipHandler(dummyHandler)
+
+	t.Run("should gzip content when Accept-Encoding is gzip", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Set("Accept-Encoding", "gzip")
+		rr := httptest.NewRecorder()
+
+		gzippedHandler.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		}
+
+		contentEncoding := rr.Header().Get("Content-Encoding")
+		if contentEncoding != "gzip" {
+			t.Errorf("Content-Encoding header mismatch: got %q, want %q", contentEncoding, "gzip")
+		}
+
+		// Decompress the body to verify content
+		reader, err := gzip.NewReader(rr.Body)
+		if err != nil {
+			t.Fatalf("failed to create gzip reader: %v", err)
+		}
+		defer reader.Close()
+
+		decompressedBody, err := ioutil.ReadAll(reader)
+		if err != nil {
+			t.Fatalf("failed to decompress body: %v", err)
+		}
+
+		if string(decompressedBody) != dummyContent {
+			t.Errorf("decompressed body mismatch: got %q, want %q", string(decompressedBody), dummyContent)
+		}
+	})
+
+	t.Run("should not gzip content when Accept-Encoding is not gzip", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/", nil)
+		rr := httptest.NewRecorder()
+
+		gzippedHandler.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		}
+
+		contentEncoding := rr.Header().Get("Content-Encoding")
+		if contentEncoding != "" {
+			t.Errorf("Content-Encoding header should be empty, got %q", contentEncoding)
+		}
+
+		if rr.Body.String() != dummyContent {
+			t.Errorf("body mismatch: got %q, want %q", rr.Body.String(), dummyContent)
 		}
 	})
 }
