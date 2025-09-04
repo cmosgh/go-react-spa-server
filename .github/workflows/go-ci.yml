@@ -21,17 +21,6 @@ jobs:
       with:
         go-version: '1.22.x' # Or your preferred Go version
 
-    - name: Download Go modules
-      run: go mod download
-
-    - name: Cache Go modules
-      uses: actions/cache@v4
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-
     - name: Build Go Application
       run: go build -v ./...
 
@@ -59,16 +48,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '22' # Ensure Node.js is available for npm/npx in the script
-
-    - name: Cache Playwright browsers
-      uses: actions/cache@v4
-      with:
-        path: |
-          /home/runner/.cache/ms-playwright
-        key: playwright-browsers-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-        restore-keys: |
-          playwright-browsers-${{ runner.os }}-
+        node-version: '20' # Ensure Node.js is available for npm/npx in the script
 
     - name: Cache Playwright browsers
       uses: actions/cache@v4
