@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time" // For caching headers
+	
 
 	"github.com/NYTimes/gziphandler" // For gzip compression
 )
