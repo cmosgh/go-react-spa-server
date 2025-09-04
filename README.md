@@ -1,7 +1,3 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Architecture
 
 This is a Go-React SPA (Single Page Application) server that combines:
