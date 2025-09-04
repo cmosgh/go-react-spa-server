@@ -251,3 +251,25 @@ func TestGzipCompression(t *testing.T) {
 		}
 	})
 }
+
+func TestGetStaticDir(t *testing.T) {
+	t.Run("STATIC_DIR is set", func(t *testing.T) {
+		os.Setenv("STATIC_DIR", "/tmp/custom/dist")
+		defer os.Unsetenv("STATIC_DIR") // Clean up after test
+
+		dir := getStaticDir()
+		expected := "/tmp/custom/dist"
+		if dir != expected {
+			t.Errorf("getStaticDir() returned %q, want %q when STATIC_DIR is set", dir, expected)
+		}
+	})
+
+	t.Run("STATIC_DIR is not set", func(t *testing.T) {
+		os.Unsetenv("STATIC_DIR") // Ensure it's not set
+		dir := getStaticDir()
+		expected := "./client/dist"
+		if dir != expected {
+			t.Errorf("getStaticDir() returned %q, want %q when STATIC_DIR is not set", dir, expected)
+		}
+	})
+}

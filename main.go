@@ -36,11 +36,16 @@ func cacheControlMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func main() {
+func getStaticDir() string {
 	staticDir := os.Getenv("STATIC_DIR")
 	if staticDir == "" {
 		staticDir = "./client/dist"
 	}
+	return staticDir
+}
+
+func main() {
+	staticDir := getStaticDir()
 
 	// The file server for static assets
 	fs := http.FileServer(http.Dir(staticDir))
