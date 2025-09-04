@@ -81,9 +81,6 @@ func TestSpaHandler(t *testing.T) {
 		if !strings.Contains(body, "<title>Vite + React</title>") {
 			t.Errorf("body should contain the Vite + React title")
 		}
-		if !strings.Contains(body, "<title>Vite + React</title>") {
-			t.Errorf("body should contain the Vite + React title")
-		}
 	})
 
 	t.Run("serves index.html for a non-existent client-side route", func(t *testing.T) {
