@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "Сontext7": {
+      "description": "Context7 MCP Server - use it for looking up documentation of different libraries",
+      "autoApprove": [],
+      "disabled": false,
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+  }
+}
