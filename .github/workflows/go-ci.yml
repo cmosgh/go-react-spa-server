@@ -24,8 +24,14 @@ jobs:
     - name: Build Go Application
       run: go build -v ./...
 
-    - name: Run Go Tests
-      run: go test -v ./...
+    - name: Run Go Tests and Generate Coverage
+      run: go test -v -coverprofile=coverage.out ./...
+
+    - name: Upload Coverage Report Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: go-coverage-report
+        path: coverage.out
 
   e2e-test:
     runs-on: ubuntu-latest
