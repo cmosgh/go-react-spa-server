@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/NYTimes/gziphandler"
 )
@@ -87,9 +88,139 @@ func TestSpaHandler(t *testing.T) {
 			t.Errorf("body of JS asset should not be empty")
 		}
 	})
+
+	t.Run("serves existing static asset with ETag and Last-Modified headers", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/vite.svg", nil)
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		}
+
+		etag := rr.Header().Get("ETag")
+		if etag == "" {
+			t.Errorf("ETag header not found")
+		}
+
+		lastModified := rr.Header().Get("Last-Modified")
+		if lastModified == "" {
+			t.Errorf("Last-Modified header not found")
+		}
+
+		contentType := rr.Header().Get("Content-Type")
+		if !strings.Contains(contentType, "image/svg+xml") {
+			t.Errorf("wrong content type for SVG file: got %q, want it to contain 'image/svg+xml'", contentType)
+		}
+	})
+
+	t.Run("returns 304 Not Modified for ETag match", func(t *testing.T) {
+		// First request to get ETag
+		req1 := httptest.NewRequest("GET", "/vite.svg", nil)
+		rr1 := httptest.NewRecorder()
+		handler.ServeHTTP(rr1, req1)
+		etag := rr1.Header().Get("ETag")
+		if etag == "" {
+			t.Fatal("ETag not found in first response")
+		}
+
+		// Second request with If-None-Match
+		req2 := httptest.NewRequest("GET", "/vite.svg", nil)
+		req2.Header.Set("If-None-Match", etag)
+		rr2 := httptest.NewRecorder()
+		handler.ServeHTTP(rr2, req2)
+
+		if status := rr2.Code; status != http.StatusNotModified {
+			t.Errorf("handler returned wrong status code: got %v want %v, body: %s", status, http.StatusNotModified, rr2.Body.String())
+		}
+		if rr2.Body.Len() != 0 {
+			t.Errorf("body should be empty for 304 response, got %d bytes", rr2.Body.Len())
+		}
+	})
+
+	t.Run("returns 304 Not Modified for If-Modified-Since match", func(t *testing.T) {
+		// First request to get Last-Modified
+		req1 := httptest.NewRequest("GET", "/vite.svg", nil)
+		rr1 := httptest.NewRecorder()
+		handler.ServeHTTP(rr1, req1)
+		lastModified := rr1.Header().Get("Last-Modified")
+		if lastModified == "" {
+			t.Fatal("Last-Modified not found in first response")
+		}
+
+		// Second request with If-Modified-Since
+		req2 := httptest.NewRequest("GET", "/vite.svg", nil)
+		req2.Header.Set("If-Modified-Since", lastModified)
+		rr2 := httptest.NewRecorder()
+		handler.ServeHTTP(rr2, req2)
+
+		if status := rr2.Code; status != http.StatusNotModified {
+			t.Errorf("handler returned wrong status code: got %v want %v, body: %s", status, http.StatusNotModified, rr2.Body.String())
+		}
+		if rr2.Body.Len() != 0 {
+			t.Errorf("body should be empty for 304 response, got %d bytes", rr2.Body.Len())
+		}
+	})
+
+	t.Run("returns 200 OK if ETag does not match", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/vite.svg", nil)
+		req.Header.Set("If-None-Match", "invalid-etag")
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		}
+		if rr.Body.Len() == 0 {
+			t.Errorf("body should not be empty for 200 OK response")
+		}
+	})
+
+	t.Run("returns 200 OK if If-Modified-Since is older than actual modification", func(t *testing.T) {
+		// Get current Last-Modified
+		req1 := httptest.NewRequest("GET", "/vite.svg", nil)
+		rr1 := httptest.NewRecorder()
+		handler.ServeHTTP(rr1, req1)
+		currentLastModified := rr1.Header().Get("Last-Modified")
+		if currentLastModified == "" {
+			t.Fatal("Last-Modified not found in first response")
+		}
+
+		// Parse current Last-Modified and subtract a day
+		oldTime, err := http.ParseTime(currentLastModified)
+		if err != nil {
+			t.Fatalf("failed to parse Last-Modified time: %v", err)
+		}
+		oldTime = oldTime.Add(-24 * time.Hour)
+		oldModifiedSince := oldTime.Format(http.TimeFormat)
+
+		req2 := httptest.NewRequest("GET", "/vite.svg", nil)
+		req2.Header.Set("If-Modified-Since", oldModifiedSince)
+		rr2 := httptest.NewRecorder()
+		handler.ServeHTTP(rr2, req2)
+
+		if status := rr2.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		}
+		if rr2.Body.Len() == 0 {
+			t.Errorf("body should not be empty for 200 OK response")
+		}
+	})
 }
 
 func TestCacheControlMiddleware(t *testing.T) {
+	// Temporarily set STATIC_DIR to a known value for testing
+	os.Setenv("STATIC_DIR", "./static")
+	defer os.Unsetenv("STATIC_DIR") // Clean up after test
+
+	// Create a dummy favicon.ico for testing generic static files
+	faviconPath := filepath.Join("./static", "favicon.ico")
+	err := ioutil.WriteFile(faviconPath, []byte("dummy favicon content"), 0644)
+	if err != nil {
+		t.Fatalf("failed to create dummy favicon.ico: %v", err)
+	}
+	defer os.Remove(faviconPath) // Clean up after test
+
 	// A dummy handler to pass to the middleware
 	dummyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -127,9 +258,14 @@ func TestCacheControlMiddleware(t *testing.T) {
 			expected: "no-cache, no-store, must-revalidate",
 		},
 		{
-			name:        "non-asset path",
-			path:        "/api/data",
+			name:     "non-asset path",
+			path:     "/api/data",
 			notExpected: "max-age", // Should not have a cache-control header set by this middleware
+		},
+		{
+			name:     "generic static file",
+			path:     "/favicon.ico",
+			expected: "public, max-age=3600",
 		},
 	}
 

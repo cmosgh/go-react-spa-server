@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/NYTimes/gziphandler" // For gzip compression
 )
@@ -30,6 +32,14 @@ func cacheControlMiddleware(next http.Handler) http.Handler {
 			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 			w.Header().Set("Pragma", "no-cache")
 			w.Header().Set("Expires", "0")
+		} else {
+			// Check if the requested path corresponds to an actual file in the static directory.
+			// Only apply default cache control if it's a static file.
+			staticDir := getStaticDir()
+			filePath := filepath.Join(staticDir, r.URL.Path)
+			if _, err := os.Stat(filePath); err == nil { // File exists
+				w.Header().Set("Cache-Control", "public, max-age=3600")
+			}
 		}
 		next.ServeHTTP(w, r)
 	})
@@ -56,14 +66,54 @@ func createSpaHandler(staticDir string) http.Handler {
 	fs := http.FileServer(http.Dir(staticDir))
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		filePath := filepath.Join(staticDir, r.URL.Path)
+		requestedPath := filepath.Join(staticDir, r.URL.Path)
+		serveFilePath := requestedPath // Assume requested path initially
 
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
+		// Check if the requested file exists, otherwise fallback to index.html
+		_, err := os.Stat(requestedPath)
+		if os.IsNotExist(err) {
+			serveFilePath = filepath.Join(staticDir, "index.html")
+		}
+
+		// Get file info for ETag and Last-Modified
+		fileInfo, err := os.Stat(serveFilePath)
+		if err != nil {
+			// If file doesn't exist even after fallback (shouldn't happen for index.html),
+			// or other error, let http.FileServer handle it or return 404.
+			http.NotFound(w, r)
 			return
 		}
 
-		fs.ServeHTTP(w, r)
+		// Generate ETag
+		etag := fmt.Sprintf("%x-%x", fileInfo.ModTime().Unix(), fileInfo.Size())
+		w.Header().Set("ETag", etag)
+
+		// Set Last-Modified header
+		w.Header().Set("Last-Modified", fileInfo.ModTime().Format(http.TimeFormat))
+
+		// Check If-None-Match
+		ifNoneMatch := r.Header.Get("If-None-Match")
+		if ifNoneMatch != "" && ifNoneMatch == etag {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+
+		// Check If-Modified-Since
+		ifModifiedSince := r.Header.Get("If-Modified-Since")
+		if ifModifiedSince != "" {
+			t, err := http.ParseTime(ifModifiedSince)
+			if err == nil && fileInfo.ModTime().Before(t.Add(1*time.Second)) { // Add 1 second tolerance
+				w.WriteHeader(http.StatusNotModified)
+				return
+			}
+		}
+
+		// If not 304, serve the file
+		if serveFilePath == requestedPath {
+			fs.ServeHTTP(w, r) // Serve the requested file
+		} else {
+			http.ServeFile(w, r, serveFilePath) // Serve index.html fallback
+		}
 	})
 }
 

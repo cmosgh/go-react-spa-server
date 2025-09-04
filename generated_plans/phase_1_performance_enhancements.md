@@ -4,16 +4,16 @@
 
 ## Feature: Enhanced Caching Headers (ETag/Last-Modified/Cache-Control)
 
-- [ ] **Description:** Refine the existing `CacheControlMiddleware` to ensure optimal ETag generation, Last-Modified header handling, and granular `Cache-Control` directives. This will leverage browser caching effectively, reducing server load and improving perceived performance for repeat visitors.
-- [ ] **Implementation Steps:**
-    - [ ] **Review Current `CacheControlMiddleware`:** Analyze `main.go` to understand the existing implementation of `CacheControlMiddleware`.
-    - [ ] **Implement ETag Generation:** For each static file served, generate a strong ETag (e.g., based on file content hash or modification time + size).
-    - [ ] **Handle `If-None-Match` and `If-Modified-Since`:** Implement logic to check incoming `If-None-Match` (for ETag) and `If-Modified-Since` (for Last-Modified) headers. If the content hasn't changed, respond with `304 Not Modified`.
-    - [ ] **Granular `Cache-Control`:**
-        - [ ] For hashed assets (e.g., `index-BofCMMuu.css`, `index-CtS_vSNO.js`), set `Cache-Control: public, max-age=31536000, immutable` (or a very long max-age) to ensure aggressive caching by browsers.
-        - [ ] For `index.html`, set `Cache-Control: no-cache, no-store, must-revalidate` to ensure it's always fetched fresh, as it's the entry point and might change frequently.
-        - [ ] For other static assets (e.g., `vite.svg`, `horse.svg` if not hashed), set a reasonable `max-age` (e.g., `Cache-Control: public, max-age=3600`).
-    - [ ] **Unit Tests:** Add comprehensive unit tests for the updated `CacheControlMiddleware` to cover various scenarios (first request, subsequent request with ETag/Last-Modified, different asset types).
+- [x] **Description:** Refine the existing `CacheControlMiddleware` to ensure optimal ETag generation, Last-Modified header handling, and granular `Cache-Control` directives. This will leverage browser caching effectively, reducing server load and improving perceived performance for repeat visitors.
+- [x] **Implementation Steps:**
+    - [x] **Review Current `CacheControlMiddleware`:** Analyze `main.go` to understand the existing implementation of `CacheControlMiddleware`.
+    - [x] **Implement ETag Generation:** For each static file served, generate a strong ETag (e.g., based on file content hash or modification time + size).
+    - [x] **Handle `If-None-Match` and `If-Modified-Since`:** Implement logic to check incoming `If-None-Match` (for ETag) and `If-Modified-Since` (for Last-Modified) headers. If the content hasn't changed, respond with `304 Not Modified`.
+    - [x] **Granular `Cache-Control`:**
+        - [x] For hashed assets (e.g., `index-BofCMMuu.css`, `index-CtS_vSNO.js`), set `Cache-Control: public, max-age=31536000, immutable` (or a very long max-age) to ensure aggressive caching by browsers.
+        - [x] For `index.html`, set `Cache-Control: no-cache, no-store, must-revalidate` to ensure it's always fetched fresh, as it's the entry point and might change frequently.
+        - [x] For other static assets (e.g., `vite.svg`, `horse.svg` if not hashed), set a reasonable `max-age` (e.g., `Cache-Control: public, max-age=3600`).
+    - [x] **Unit Tests:** Add comprehensive unit tests for the updated `CacheControlMiddleware` to cover various scenarios (first request, subsequent request with ETag/Last-Modified, different asset types).
 
 ## Feature: Brotli Compression Support
 
