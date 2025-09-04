@@ -1,0 +1,8 @@
+{
+  "search": {
+    "provider": "jetbrains_mcp"
+  },
+  "commit": {
+    "default_type": "chore"
+  }
+}

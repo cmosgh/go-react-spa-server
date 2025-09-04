@@ -1,0 +1,48 @@
+name: Go CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.x' # Or your preferred Go version
+
+    - name: Build Go Application
+      run: go build -v ./...
+
+    - name: Run Go Tests
+      run: go test -v ./...
+
+  e2e-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.x' # Ensure Go is available for 'go run' in the script
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20' # Ensure Node.js is available for npm/npx in the script
+
+    - name: Run E2E Tests Script
+      run: chmod +x run-e2e-tests.sh && ./run-e2e-tests.sh
