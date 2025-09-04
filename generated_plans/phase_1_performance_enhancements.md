@@ -27,10 +27,10 @@
 
 ## Feature: In-Memory Caching for Critical Assets
 
-- [ ] **Description:** Implement a simple in-memory cache for frequently accessed, small, and non-changing critical assets like `index.html` (after it's built) and potentially `vite.svg`. This reduces disk I/O and speeds up initial requests.
-- [ ] **Implementation Steps:**
-    - [ ] **Choose Caching Mechanism:** Use a simple `map` or a small, thread-safe cache library in Go.
-    - [ ] **Load Assets into Cache:** During server startup, read `index.html` and other specified critical assets into memory.
-    - [ ] **Serve from Cache:** When a request comes for a cached asset, serve it directly from memory.
-    - [ ] **Cache Invalidation (Development):** Consider a mechanism to invalidate the cache in development mode if the underlying files change (e.g., by watching file changes, though this might add complexity). For production, the cache can be loaded once at startup.
-    - [ ] **Unit Tests:** Test the in-memory caching logic.
+- [x] **Description:** Implement a simple in-memory cache for frequently accessed, small, and non-changing critical assets like `index.html` (after it's built) and potentially `vite.svg`. This reduces disk I/O and speeds up initial requests.
+- [x] **Implementation Steps:**
+    - [x] **Choose Caching Mechanism:** Use a simple `map` or a small, thread-safe cache library in Go.
+    - [x] **Load Assets into Cache:** During server startup, read `index.html` and other specified critical assets into memory.
+    - [x] **Serve from Cache:** When a request comes for a cached asset, serve it directly from memory.
+    - [x] **Cache Invalidation (Development):** Consider a mechanism to invalidate the cache in development mode if the underlying files change (e.g., by watching file changes, though this might add complexity). For production, the cache can be loaded once at startup.
+    - [x] **Unit Tests:** Test the in-memory caching logic.
