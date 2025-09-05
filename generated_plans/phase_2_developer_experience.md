@@ -23,7 +23,7 @@
 - [x] **Description:** Allow the server's listening port to be configured via an environment variable (e.g., `PORT`). This simplifies deployment in containerized environments like Docker, where port mapping is common.
 - [x] **Implementation Steps:**
     - [x] **Environment Variable Check:** Modify the server initialization in `main.go` (or `server.go`) to check for a `PORT` environment variable.
-    - [x] **Default Port:** If the `PORT` environment variable is not set, the server should default to a standard port (e.g., `8080`).
+    - [x] **Default Port:** If the `PORT` environment variable is not set, the server should default to a standard port (e.g., `8081`).
     - [x] **Server Listen Address:** Use the configured port when setting up the server's listen address.
     - [x] **Documentation:** Document this new configuration option in the `README.md`, including how to use it with Docker.
 

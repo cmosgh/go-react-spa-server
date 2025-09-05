@@ -8,9 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 )
-
-
 
 func TestSpaHandler_CustomFallbackFile(t *testing.T) {
 	// Create a temporary directory for this test
@@ -29,7 +30,7 @@ func TestSpaHandler_CustomFallbackFile(t *testing.T) {
 
 	// Create a config for the handler with custom fallback
 	cfg := &Config{
-		StaticDir: tempStaticDir,
+		StaticDir:       tempStaticDir,
 		SpaFallbackFile: "app.html",
 	}
 
@@ -93,7 +94,7 @@ func TestSpaHandler_DefaultFallbackFile(t *testing.T) {
 
 	// Create a config for the handler with default fallback (index.html)
 	cfg := &Config{
-		StaticDir: tempStaticDir,
+		StaticDir:       tempStaticDir,
 		SpaFallbackFile: "index.html", // Explicitly set to default for clarity
 	}
 
@@ -137,4 +138,73 @@ func TestSpaHandler_DefaultFallbackFile(t *testing.T) {
 	if !strings.Contains(body, "Default Index Fallback") {
 		t.Errorf("body should contain the default index fallback content for root")
 	}
+}
+
+func TestCreateSpaHandler_NotModifiedHeaders(t *testing.T) {
+	tempStaticDir, err := ioutil.TempDir("", "test_static_dir_not_modified")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempStaticDir)
+
+	// Create a dummy file to serve
+	filePath := filepath.Join(tempStaticDir, "test.html")
+	content := []byte("<html><body>Test Content</body></html>")
+	err = ioutil.WriteFile(filePath, content, 0644)
+	if err != nil {
+		t.Fatalf("failed to create test.html: %v", err)
+	}
+
+	cfg := &Config{
+		StaticDir:       tempStaticDir,
+		SpaFallbackFile: "index.html", // Not directly used in this test, but required
+	}
+	handler := CreateSpaHandler(cfg)
+
+	// Clear cache to ensure file is served from disk
+	for k := range inMemoryCache {
+		delete(inMemoryCache, k)
+	}
+
+	// Test If-None-Match
+	t.Run("If-None-Match", func(t *testing.T) {
+		// First request to get the ETag
+		req1 := httptest.NewRequest("GET", "/test.html", nil)
+		rec1 := httptest.NewRecorder()
+		handler.ServeHTTP(rec1, req1)
+		assert.Equal(t, http.StatusOK, rec1.Code)
+		actualEtag := rec1.Header().Get("ETag")
+		assert.NotEmpty(t, actualEtag)
+
+		// Second request with If-None-Match
+		req2 := httptest.NewRequest("GET", "/test.html", nil)
+		req2.Header.Set("If-None-Match", actualEtag)
+
+		rec2 := httptest.NewRecorder()
+		handler.ServeHTTP(rec2, req2)
+
+		assert.Equal(t, http.StatusNotModified, rec2.Code)
+	})
+
+	// Test If-Modified-Since
+	t.Run("If-Modified-Since", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/test.html", nil)
+		// Set If-Modified-Since to a time before the file's modification time
+		req.Header.Set("If-Modified-Since", time.Now().Add(-24*time.Hour).Format(http.TimeFormat))
+
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code) // Should serve content if modified since
+		assert.Equal(t, string(content), rr.Body.String())
+
+		// Set If-Modified-Since to a time after the file's modification time
+		req = httptest.NewRequest("GET", "/test.html", nil)
+		req.Header.Set("If-Modified-Since", time.Now().Add(24*time.Hour).Format(http.TimeFormat))
+
+		rr = httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusNotModified, rr.Code) // Should return 304 if not modified since
+	})
 }

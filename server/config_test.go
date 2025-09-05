@@ -39,7 +39,7 @@ func TestLoadConfig_FileDoesNotExist(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err) // No error expected if file doesn't exist
 	assert.NotNil(t, config)
-	assert.Equal(t, "", config.StaticDir) // Should be empty if not set
+	assert.Equal(t, "", config.StaticDir)                 // Should be empty if not set
 	assert.Equal(t, "index.html", config.SpaFallbackFile) // Should be default
 }
 
@@ -150,7 +150,7 @@ func TestLoadConfig_DefaultPort(t *testing.T) {
 	config, err := LoadConfig() // First assignment of config, subsequent assignment of err
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	assert.Equal(t, 8080, config.Port) // Should be default
+	assert.Equal(t, 8081, config.Port) // Should be default
 }
 
 func TestLoadConfig_PortFromEnvVar(t *testing.T) {
@@ -165,7 +165,7 @@ func TestLoadConfig_PortFromEnvVar(t *testing.T) {
 	config, err := LoadConfig() // First assignment of config, subsequent assignment of err
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	assert.Equal(t, 9000, config.Port);
+	assert.Equal(t, 9000, config.Port)
 }
 
 func TestLoadConfig_InvalidPortEnvVar(t *testing.T) {
@@ -178,8 +178,8 @@ func TestLoadConfig_InvalidPortEnvVar(t *testing.T) {
 	t.Setenv("PORT", "invalid")
 
 	config, err := LoadConfig() // First assignment of config, subsequent assignment of err
-	assert.Error(t, err) // Expect an error
-	assert.Nil(t, config);
+	assert.Error(t, err)        // Expect an error
+	assert.Nil(t, config)
 }
 
 func TestLoadConfig_PortFromFile(t *testing.T) {
@@ -196,7 +196,7 @@ func TestLoadConfig_PortFromFile(t *testing.T) {
 	config, err := LoadConfig() // First assignment of config, subsequent assignment of err
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	assert.Equal(t, 9090, config.Port);
+	assert.Equal(t, 9090, config.Port)
 }
 
 func TestLoadConfig_PortEnvVarPrecedence(t *testing.T) {
@@ -215,5 +215,66 @@ func TestLoadConfig_PortEnvVarPrecedence(t *testing.T) {
 	config, err := LoadConfig() // First assignment of config, subsequent assignment of err
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	assert.Equal(t, 9000, config.Port); // Env var should take precedence
+	assert.Equal(t, 9000, config.Port) // Env var should take precedence
+}
+
+func TestLoadConfig_CSPHeaderFromEnvVar(t *testing.T) {
+	tempDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	err := os.Chdir(tempDir)
+	assert.NoError(t, err)
+
+	t.Setenv("CSP_HEADER", "default-src 'self'")
+
+	config, err := LoadConfig()
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, "default-src 'self'", config.CSPHeader)
+}
+
+func TestLoadConfig_HSTSMaxAgeFromEnvVar(t *testing.T) {
+	tempDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	err := os.Chdir(tempDir)
+	assert.NoError(t, err)
+
+	t.Setenv("HSTS_MAX_AGE", "31536000")
+
+	config, err := LoadConfig()
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, 31536000, config.HSTSMaxAge)
+}
+
+func TestLoadConfig_InvalidHSTSMaxAgeEnvVar(t *testing.T) {
+	tempDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	err := os.Chdir(tempDir)
+	assert.NoError(t, err)
+
+	t.Setenv("HSTS_MAX_AGE", "invalid")
+
+	config, err := LoadConfig()
+	assert.Error(t, err)
+	assert.Nil(t, config)
+}
+
+func TestLoadConfig_DefaultCSPAndHSTS(t *testing.T) {
+	tempDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	err := os.Chdir(tempDir)
+	assert.NoError(t, err)
+
+	t.Setenv("CSP_HEADER", "")   // Unset for this test
+	t.Setenv("HSTS_MAX_AGE", "") // Unset for this test
+
+	config, err := LoadConfig()
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, "", config.CSPHeader)
+	assert.Equal(t, 0, config.HSTSMaxAge)
 }

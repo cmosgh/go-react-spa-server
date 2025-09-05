@@ -52,8 +52,7 @@ func CreateSpaHandler(config *Config) http.Handler {
 				}
 			}
 
-			
-		w.Write(cachedAsset.Content)
+			w.Write(cachedAsset.Content)
 			return
 		}
 
@@ -91,12 +90,12 @@ func CreateSpaHandler(config *Config) http.Handler {
 		// Check If-Modified-Since
 		ifModifiedSince := r.Header.Get("If-Modified-Since")
 		if ifModifiedSince != "" {
-				t, err := http.ParseTime(ifModifiedSince)
-				if err == nil && fileInfo.ModTime().Before(t.Add(1*time.Second)) { // Add 1 second tolerance
-					w.WriteHeader(http.StatusNotModified)
-					return
-				}
+			t, err := http.ParseTime(ifModifiedSince)
+			if err == nil && fileInfo.ModTime().Before(t.Add(1*time.Second)) { // Add 1 second tolerance
+				w.WriteHeader(http.StatusNotModified)
+				return
 			}
+		}
 
 		// If not 304, serve the file
 		if serveFilePath == requestedPath {

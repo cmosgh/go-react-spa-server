@@ -12,7 +12,7 @@ cd ..
 
 # Kill any process running on port 8080
 echo "Checking for and killing processes on port 8080..."
-PORT=8080
+PORT=8081
 PID=$(lsof -t -i:$PORT || true)
 if [ -n "$PID" ]; then
     echo "Killing process $PID on port $PORT"
@@ -45,9 +45,9 @@ cleanup() {
 trap cleanup EXIT
 
 # Wait for the server to be ready
-echo "Waiting for server to be ready on http://localhost:8080..."
+echo "Waiting for server to be ready on http://localhost:8081..."
 for i in $(seq 1 10); do
-    if curl -s http://localhost:8080 > /dev/null; then
+    if curl -s http://localhost:8081 > /dev/null; then
         echo "Server is ready!"
         break
     else
