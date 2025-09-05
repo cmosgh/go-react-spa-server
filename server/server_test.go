@@ -1,15 +1,18 @@
 package server
 
 import (
+	"compress/gzip"
+	"fmt" // Added import
+	"io/ioutil"
+	"net" // Added import
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
-	"path/filepath"
+	"time" // Added import
 
-	"compress/gzip"
-	"io/ioutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,8 +33,6 @@ func createTempConfigFile(t *testing.T, content string) (string, func()) {
 	}
 }
 
-
-
 func TestStartServer(t *testing.T) {
 	// Create a dummy handler
 	dummyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -40,9 +41,43 @@ func TestStartServer(t *testing.T) {
 
 	t.Run("server fails to start with invalid address", func(t *testing.T) {
 		// Call StartServer with an invalid address that will cause ListenAndServe to fail immediately
-		err := StartServer(":invalid_port", dummyHandler)
+		// Pass a config with an invalid port (e.g., -1, which is an invalid port number)
+		err := StartServer(&Config{Port: -1}, dummyHandler)
 		assert.Error(t, err)
 	})
+}
+
+func TestStartServer_CorrectPort(t *testing.T) {
+	// Use a random available port to avoid conflicts
+	listener, err := net.Listen("tcp", ":0")
+	assert.NoError(t, err)
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close() // Close the listener, StartServer will open it again
+
+	// Create a dummy handler
+	dummyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Create a config with the chosen port
+	cfg := &Config{
+		Port: port,
+	}
+
+	// Start the server in a goroutine
+	go func() {
+		err := StartServer(cfg, dummyHandler)
+		assert.NoError(t, err) // Expect no error when starting
+	}()
+
+	// Wait for the server to start (give it a moment)
+	time.Sleep(100 * time.Millisecond)
+
+	// Attempt to connect to the server
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%d", port))
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	resp.Body.Close()
 }
 
 func TestSetupHandlers(t *testing.T) {

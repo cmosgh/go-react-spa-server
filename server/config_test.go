@@ -137,4 +137,83 @@ func TestLoadConfig_InvalidSpaFallbackFile(t *testing.T) {
 	})
 }
 
+func TestLoadConfig_DefaultPort(t *testing.T) {
+	// Ensure no config file or env var is set
+	tempDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	err := os.Chdir(tempDir) // First assignment of err in this scope
+	assert.NoError(t, err)
 
+	t.Setenv("PORT", "") // Unset for this test
+
+	config, err := LoadConfig() // First assignment of config, subsequent assignment of err
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, 8080, config.Port) // Should be default
+}
+
+func TestLoadConfig_PortFromEnvVar(t *testing.T) {
+	tempDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	err := os.Chdir(tempDir) // First assignment of err in this scope
+	assert.NoError(t, err)
+
+	t.Setenv("PORT", "9000")
+
+	config, err := LoadConfig() // First assignment of config, subsequent assignment of err
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, 9000, config.Port);
+}
+
+func TestLoadConfig_InvalidPortEnvVar(t *testing.T) {
+	tempDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	err := os.Chdir(tempDir) // First assignment of err in this scope
+	assert.NoError(t, err)
+
+	t.Setenv("PORT", "invalid")
+
+	config, err := LoadConfig() // First assignment of config, subsequent assignment of err
+	assert.Error(t, err) // Expect an error
+	assert.Nil(t, config);
+}
+
+func TestLoadConfig_PortFromFile(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, ".go-spa-server-config.json")
+	err := os.WriteFile(configPath, []byte(`{"port": 9090}`), 0644) // First assignment of err in this scope
+	assert.NoError(t, err)
+
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	err = os.Chdir(tempDir) // Subsequent assignment of err
+	assert.NoError(t, err)
+
+	config, err := LoadConfig() // First assignment of config, subsequent assignment of err
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, 9090, config.Port);
+}
+
+func TestLoadConfig_PortEnvVarPrecedence(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, ".go-spa-server-config.json")
+	err := os.WriteFile(configPath, []byte(`{"port": 9090}`), 0644) // First assignment of err in this scope
+	assert.NoError(t, err)
+
+	t.Setenv("PORT", "9000")
+
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	err = os.Chdir(tempDir) // Subsequent assignment of err
+	assert.NoError(t, err)
+
+	config, err := LoadConfig() // First assignment of config, subsequent assignment of err
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, 9000, config.Port); // Env var should take precedence
+}

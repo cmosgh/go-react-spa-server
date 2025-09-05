@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt" // Added import
 	"log"
 	"net/http"
 
@@ -10,7 +11,8 @@ import (
 
 
 // StartServer encapsulates the server startup logic.
-func StartServer(addr string, handler http.Handler) error {
+func StartServer(config *Config, handler http.Handler) error {
+	addr := fmt.Sprintf(":%d", config.Port) // Construct address from config.Port
 	log.Printf("Listening on %s...", addr)
 	return http.ListenAndServe(addr, handler)
 }

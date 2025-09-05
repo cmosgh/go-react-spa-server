@@ -16,7 +16,7 @@ func runApp() error {
 	}
 
 	http.Handle("/", finalHandler)
-	return server.StartServer(":8080", nil) // Use StartServer from server package
+	return server.StartServer(config, finalHandler) // Use StartServer from server package
 }
 
 func main() {
