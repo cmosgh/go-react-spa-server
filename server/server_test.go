@@ -10,27 +10,77 @@ import (
 
 	"compress/gzip"
 	"io/ioutil"
+	"github.com/stretchr/testify/assert"
 )
+
+// createTempConfigFile creates a temporary config file for testing.
+func createTempConfigFile(t *testing.T, content string) (string, func()) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, ".go-spa-server-config.json")
+	err := os.WriteFile(configPath, []byte(content), 0644)
+	assert.NoError(t, err)
+
+	// Change to the temporary directory to simulate running from there
+	originalDir, _ := os.Getwd()
+	err = os.Chdir(tempDir)
+	assert.NoError(t, err)
+
+	return configPath, func() {
+		os.Chdir(originalDir) // Change back to original directory
+	}
+}
 
 func TestGetStaticDir(t *testing.T) {
 	t.Run("STATIC_DIR is set", func(t *testing.T) {
-		os.Setenv("STATIC_DIR", "/tmp/custom/dist")
-		defer os.Unsetenv("STATIC_DIR") // Clean up after test
-
+		t.Setenv("STATIC_DIR", "/tmp/custom/dist")
 		dir := GetStaticDir()
-		expected := "/tmp/custom/dist"
-		if dir != expected {
-			t.Errorf("GetStaticDir() returned %q, want %q when STATIC_DIR is set", dir, expected)
-		}
+		assert.Equal(t, "/tmp/custom/dist", dir)
 	})
 
-	t.Run("STATIC_DIR is not set", func(t *testing.T) {
-		os.Unsetenv("STATIC_DIR") // Ensure it's not set
+	t.Run("STATIC_DIR is not set and no config file", func(t *testing.T) {
+		t.Setenv("STATIC_DIR", "") // Ensure it's not set
 		dir := GetStaticDir()
-		expected := "./client/dist"
-		if dir != expected {
-			t.Errorf("GetStaticDir() returned %q, want %q when STATIC_DIR is not set", dir, expected)
-		}
+		assert.Equal(t, "./client/dist", dir)
+	})
+
+	t.Run("Config file exists, no env var", func(t *testing.T) {
+		cleanup := func() {}
+		_, cleanup = createTempConfigFile(t, `{"static_dir": "./config_static"}`)
+		defer cleanup()
+
+		t.Setenv("STATIC_DIR", "") // Ensure env var is not set
+		dir := GetStaticDir()
+		assert.Equal(t, "./config_static", dir)
+	})
+
+	t.Run("Env var takes precedence over config file", func(t *testing.T) {
+		cleanup := func() {}
+		_, cleanup = createTempConfigFile(t, `{"static_dir": "./config_static"}`)
+		defer cleanup()
+
+		t.Setenv("STATIC_DIR", "./env_static")
+		dir := GetStaticDir()
+		assert.Equal(t, "./env_static", dir)
+	})
+
+	t.Run("Invalid config file, no env var (falls back to default)", func(t *testing.T) {
+		cleanup := func() {}
+		_, cleanup = createTempConfigFile(t, `{"static_dir": "./config_static"`) // Invalid JSON
+		defer cleanup()
+
+		t.Setenv("STATIC_DIR", "") // Ensure env var is not set
+		dir := GetStaticDir()
+		assert.Equal(t, "./client/dist", dir)
+	})
+
+	t.Run("Invalid config file, env var set (env var takes precedence)", func(t *testing.T) {
+		cleanup := func() {}
+		_, cleanup = createTempConfigFile(t, `{"static_dir": "./config_static"`) // Invalid JSON
+		defer cleanup()
+
+		t.Setenv("STATIC_DIR", "./env_static")
+		dir := GetStaticDir()
+		assert.Equal(t, "./env_static", dir)
 	})
 }
 
@@ -43,31 +93,24 @@ func TestStartServer(t *testing.T) {
 	t.Run("server fails to start with invalid address", func(t *testing.T) {
 		// Call StartServer with an invalid address that will cause ListenAndServe to fail immediately
 		err := StartServer(":invalid_port", dummyHandler)
-		if err == nil {
-			t.Errorf("StartServer() did not return an error for invalid address")
-		}
+		assert.Error(t, err)
 	})
 }
 
 func TestSetupHandlers(t *testing.T) {
 	// Create a temporary directory for this test
 	tempStaticDir, err := ioutil.TempDir("", "test_static_dir_setup_handlers")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
+	assert.NoError(t, err)
 	defer os.RemoveAll(tempStaticDir) // Clean up after test
 
 	// Temporarily set STATIC_DIR to the temporary directory for testing
-	os.Setenv("STATIC_DIR", tempStaticDir)
-	defer os.Unsetenv("STATIC_DIR")
+	t.Setenv("STATIC_DIR", tempStaticDir)
 
 	// Create a temporary large file for testing gzip
 	largeContent := strings.Repeat("a", 2000) // Content larger than typical gzip threshold
 	tempFilePath := filepath.Join(tempStaticDir, "temp_large_file.txt")
 	err = ioutil.WriteFile(tempFilePath, []byte(largeContent), 0644)
-	if err != nil {
-		t.Fatalf("failed to create temporary file: %v", err)
-	}
+	assert.NoError(t, err)
 
 	handler := SetupHandlers()
 
@@ -77,10 +120,7 @@ func TestSetupHandlers(t *testing.T) {
 		handler.ServeHTTP(rr, req)
 
 		cacheControl := rr.Header().Get("Cache-Control")
-		expected := "public, max-age=31536000, immutable"
-		if cacheControl != expected {
-			t.Errorf("Cache-Control header mismatch: got %q, want %q", cacheControl, expected)
-		}
+		assert.Equal(t, "public, max-age=31536000, immutable", cacheControl)
 	})
 
 	t.Run("should apply no-cache for index.html", func(t *testing.T) {
@@ -89,16 +129,9 @@ func TestSetupHandlers(t *testing.T) {
 		handler.ServeHTTP(rr, req)
 
 		cacheControl := rr.Header().Get("Cache-Control")
-		expected := "no-cache, no-store, must-revalidate"
-		if cacheControl != expected {
-			t.Errorf("Cache-Control header mismatch: got %q, want %q", cacheControl, expected)
-		}
-		if rr.Header().Get("Pragma") != "no-cache" {
-				t.Errorf("Pragma header mismatch: got %q, want %q", rr.Header().Get("Pragma"), "no-cache")
-			}
-			if rr.Header().Get("Expires") != "0" {
-				t.Errorf("Expires header mismatch: got %q, want %q", rr.Header().Get("Expires"), "0")
-			}
+		assert.Equal(t, "no-cache, no-store, must-revalidate", cacheControl)
+		assert.Equal(t, "no-cache", rr.Header().Get("Pragma"))
+		assert.Equal(t, "0", rr.Header().Get("Expires"))
 	})
 
 	t.Run("should gzip content when Accept-Encoding is gzip", func(t *testing.T) {
@@ -106,9 +139,7 @@ func TestSetupHandlers(t *testing.T) {
 		largeContent := strings.Repeat("a", 2000) // Content larger than typical gzip threshold
 		tempFilePath := filepath.Join(tempStaticDir, "temp_large_file.txt")
 		err = ioutil.WriteFile(tempFilePath, []byte(largeContent), 0644)
-		if err != nil {
-			t.Fatalf("failed to create temporary file: %v", err)
-		}
+		assert.NoError(t, err)
 
 		req := httptest.NewRequest("GET", "/temp_large_file.txt", nil) // Request the temporary file
 		req.Header.Set("Accept-Encoding", "gzip")
@@ -116,23 +147,15 @@ func TestSetupHandlers(t *testing.T) {
 		handler.ServeHTTP(rr, req)
 
 		contentEncoding := rr.Header().Get("Content-Encoding")
-		if contentEncoding != "gzip" {
-			t.Errorf("Content-Encoding header mismatch: got %q, want %q", contentEncoding, "gzip")
-		}
+		assert.Equal(t, "gzip", contentEncoding)
 
 		// Verify content is gzipped by attempting to decompress
 		reader, err := gzip.NewReader(rr.Body)
-		if err != nil {
-			t.Fatalf("failed to create gzip reader: %v", err)
-		}
+		assert.NoError(t, err)
 		defer reader.Close()
 		decompressedBody, err := ioutil.ReadAll(reader)
-		if err != nil {
-			t.Fatalf("failed to decompress body: %v", err)
-		}
+		assert.NoError(t, err)
 
-		if string(decompressedBody) != largeContent {
-			t.Errorf("decompressed body mismatch: got %q, want %q", string(decompressedBody), largeContent)
-		}
+		assert.Equal(t, largeContent, string(decompressedBody))
 	})
 }

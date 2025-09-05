@@ -9,10 +9,31 @@ import (
 )
 
 func GetStaticDir() string {
-	staticDir := os.Getenv("STATIC_DIR")
+	// 1. Try to load from config file
+	config, err := LoadConfig()
+	if err != nil {
+		log.Printf("Error loading config file: %v", err)
+	}
+
+	staticDir := ""
+	if config != nil && config.StaticDir != "" {
+		staticDir = config.StaticDir
+		log.Printf("Using static directory from config file: %s", staticDir)
+	}
+
+	// 2. Check STATIC_DIR environment variable (takes precedence)
+	envStaticDir := os.Getenv("STATIC_DIR")
+	if envStaticDir != "" {
+		staticDir = envStaticDir
+		log.Printf("Using static directory from environment variable: %s", staticDir)
+	}
+
+	// 3. Default fallback
 	if staticDir == "" {
 		staticDir = "./client/dist"
+		log.Printf("Using default static directory: %s", staticDir)
 	}
+
 	return staticDir
 }
 

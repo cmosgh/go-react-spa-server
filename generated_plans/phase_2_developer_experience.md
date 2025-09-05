@@ -4,10 +4,10 @@
 
 ## Feature: Flexible Static Directory Configuration
 
-- [ ] **Description:** Enhance the `STATIC_DIR` environment variable to allow for more flexible configuration, potentially supporting multiple static directories or a configuration file.
-- [ ] **Implementation Steps:**
-    - [ ] **Configuration File Support:** Introduce support for a simple configuration file (e.g., `config.json` or `config.yaml`) that can define the static directory path. Environment variables should still take precedence.
-    - [ ] **Update `main.go`:** Modify the server initialization to read from the new configuration source.
+- [x] **Description:** Enhance the `STATIC_DIR` environment variable to allow for more flexible configuration, potentially supporting multiple static directories or a configuration file.
+- [x] **Implementation Steps:**
+    - [x] **Configuration File Support:** Introduce support for a simple configuration file (e.g., `config.json` or `config.yaml`) that can define the static directory path. Environment variables should still take precedence.
+    - [x] **Update `main.go`:** Modify the server initialization to read from the new configuration source.
     - [ ] **Documentation:** Clearly document the new configuration options in the README.md.
 
 ## Feature: Customizable SPA Fallback
