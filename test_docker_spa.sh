@@ -6,7 +6,7 @@ set -e
 IMAGE_NAME="go-spa-server:latest"
 CONTAINER_NAME="go-spa-test-container"
 HOST_PORT="8081"
-CONTAINER_PORT="8080"
+CONTAINER_PORT="8081"
 
 # --- Cleanup previous runs ---
 echo "--- Cleaning up any previous Docker container runs ---"
