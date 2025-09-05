@@ -2,7 +2,7 @@
 import { test, expect } from '@playwright/test';
 
 test('homepage has "I AM HERE TO WORK FOR YOU" and a link to google', async ({ page }) => {
-  await page.goto('http://localhost:8080/');
+  await page.goto('http://localhost:8081/');
 
   // Add a longer wait to ensure the React app has time to render
   await page.waitForSelector('nav', { state: 'visible', timeout: 10000 });
