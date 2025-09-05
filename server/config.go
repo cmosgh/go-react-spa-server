@@ -68,7 +68,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// Basic validation for SpaFallbackFile
-	if config.SpaFallbackFile == "" || strings.ContainsAny(config.SpaFallbackFile, "/") {
+	if config.SpaFallbackFile == "" || strings.ContainsAny(config.SpaFallbackFile, "/\\") {
 		return nil, fmt.Errorf("invalid SPA_FALLBACK_FILE: %s", config.SpaFallbackFile)
 	}
 
