@@ -35,7 +35,7 @@ func TestInMemoryCaching(t *testing.T) {
 	defer os.RemoveAll(tempStaticDir) // Clean up after test
 
 	cfg := &Config{
-		StaticDir: tempStaticDir,
+		StaticDir:       tempStaticDir,
 		SpaFallbackFile: "index.html",
 	}
 
@@ -67,7 +67,6 @@ func TestInMemoryCaching(t *testing.T) {
 		if err != nil {
 			t.Fatalf("loadCriticalAssetsIntoCache failed: %v", err)
 		}
-		
 
 		if len(inMemoryCache) != 2 {
 			t.Errorf("Expected 2 assets in cache, got %d", len(inMemoryCache))
@@ -123,7 +122,6 @@ func TestInMemoryCaching(t *testing.T) {
 			}
 		}()
 
-
 		// Create a temporary directory for this test to ensure no actual files interfere
 		tempDir, err := ioutil.TempDir("", "test_static_dir")
 		if err != nil {
@@ -136,7 +134,6 @@ func TestInMemoryCaching(t *testing.T) {
 		if err != nil {
 			t.Fatalf("loadCriticalAssetsIntoCache failed: %v", err)
 		}
-		
 
 		if len(inMemoryCache) != 0 {
 			t.Errorf("Expected 0 assets in cache, got %d", len(inMemoryCache))

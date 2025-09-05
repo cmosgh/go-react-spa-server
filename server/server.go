@@ -8,8 +8,6 @@ import (
 	"github.com/NYTimes/gziphandler" // For gzip compression
 )
 
-
-
 // StartServer encapsulates the server startup logic.
 func StartServer(config *Config, handler http.Handler) error {
 	addr := fmt.Sprintf(":%d", config.Port) // Construct address from config.Port

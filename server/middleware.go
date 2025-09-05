@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/andybalholm/brotli"   // For Brotli compression
+	"github.com/andybalholm/brotli" // For Brotli compression
 )
 
 // cacheControlMiddleware sets appropriate Cache-Control headers for static assets.

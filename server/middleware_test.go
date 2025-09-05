@@ -30,7 +30,7 @@ func TestCacheControlMiddleware(t *testing.T) {
 
 	// Create a config for the middleware
 	cfg := &Config{
-		StaticDir: tempStaticDir,
+		StaticDir:       tempStaticDir,
 		SpaFallbackFile: "index.html",
 	}
 
