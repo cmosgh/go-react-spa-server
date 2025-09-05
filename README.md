@@ -33,6 +33,27 @@ The Go server serves static files from `./client/dist` by default (configurable 
 - React app uses React Router for client-side routing
 - Static assets are served directly by Go's `http.FileServer`
 
+## Configuration
+
+### Static Directory Configuration
+
+The server serves static files from a configurable directory. The lookup order for the static directory is as follows:
+
+1.  **`STATIC_DIR` Environment Variable**: If set, this environment variable takes the highest precedence.
+    ```bash
+    STATIC_DIR=/path/to/your/static/files go run main.go
+    ```
+
+2.  **`.go-spa-server-config.json` File**: If a file named `.go-spa-server-config.json` exists in the current working directory, the `static_dir` field within this JSON file will be used.
+    Example `.go-spa-server-config.json`:
+    ```json
+    {
+      "static_dir": "./custom_static_build"
+    }
+    ```
+
+3.  **Default Path**: If neither the environment variable nor the configuration file specifies a static directory, the server defaults to serving files from `./client/dist`.
+
 ## Testing
 
 This project includes both Go unit tests for the backend and Playwright end-to-end (e2e) tests for the full application.
