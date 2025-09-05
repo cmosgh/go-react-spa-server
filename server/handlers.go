@@ -58,7 +58,7 @@ func CreateSpaHandler(config *Config) http.Handler {
 
 		// Check if the requested file exists, otherwise fallback to index.html
 		_, err := os.Stat(requestedPath)
-		if os.IsNotExist(err) || (r.URL.Path == "/" && config.SpaFallbackFile != "index.html") {
+		if r.URL.Path == "/" || os.IsNotExist(err) {
 			serveFilePath = filepath.Join(config.StaticDir, config.SpaFallbackFile)
 		}
 
