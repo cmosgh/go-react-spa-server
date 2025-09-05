@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	
 	"net/http"
 	"os"
 	"path/filepath"
