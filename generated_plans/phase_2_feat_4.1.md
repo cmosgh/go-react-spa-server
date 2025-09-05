@@ -21,7 +21,7 @@ Verify that the Go SPA server Docker image correctly serves a Single Page Applic
 - [ ] Navigate back to the project root: `cd ..`
 - [ ] Run the Docker container, mounting the `SPA_DIST_PATH` to `/app/spa-static` inside the container, and setting the `STATIC_DIR` environment variable to `/app/spa-static`.
   ```bash
-  docker run -d -p 8080:8080 \
+  docker run -d -p 8081:8081 \
     -v /path/to/your/spa/dist:/app/spa-static \
     -e STATIC_DIR=/app/spa-static \
     --name go-spa-test-container go-spa-server:latest
@@ -33,18 +33,18 @@ Verify that the Go SPA server Docker image correctly serves a Single Page Applic
 - [ ] Use `curl` or a web browser to access the SPA.
 - [ ] **Check the root path (index.html):**
   ```bash
-  curl http://localhost:8080/
+  curl http://localhost:8081/
   ```
   *Expected:* The output should be the HTML content of your `index.html` from the mounted SPA.
 - [ ] **Check a static asset (e.g., a CSS or JS file from your SPA build):**
   *   You'll need to know a specific file name from your `client/dist` (e.g., `index-BkDSiPRN.css` or `index-Djraj8qp.js` from your `static/assets` directory).
   ```bash
-  curl http://localhost:8080/assets/index-BkDSiPRN.css # Replace with an actual asset path
+  curl http://localhost:8081/assets/index-BkDSiPRN.css # Replace with an actual asset path
   ```
   *Expected:* The output should be the content of that CSS or JS file.
 - [ ] **Check a non-existent path (SPA fallback):**
   ```bash
-  curl http://localhost:8080/some-non-existent-route
+  curl http://localhost:8081/some-non-existent-route
   ```
   *Expected:* The output should still be the HTML content of your `index.html` (due to SPA fallback).
 

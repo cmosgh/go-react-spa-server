@@ -61,7 +61,7 @@ spec:
       - name: go-spa-server
         image: your-registry/your-username/go-spa-server:latest # Replace with your image
         ports:
-        - containerPort: 8080
+        - containerPort: 8081
         env:
         - name: STATIC_DIR
           value: /app/spa-static # The path inside the container where SPA files will be mounted
@@ -86,13 +86,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 8080
+            port: 8081
           initialDelaySeconds: 10
           periodSeconds: 5
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 8080
+            port: 8081
           initialDelaySeconds: 5
           periodSeconds: 3
 ```
@@ -110,7 +110,7 @@ spec:
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 8080
+      targetPort: 8081
   type: LoadBalancer # Use NodePort or ClusterIP for internal services
 ```
 

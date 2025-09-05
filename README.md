@@ -10,7 +10,7 @@ The Go server serves static files from a configurable directory (via `STATIC_DIR
 ## Development Commands
 
 ### Backend (Go)
-- `go run main.go` - Start the Go server (listens on :8080)
+- `go run main.go` - Start the Go server (listens on :8081)
 - `go test ./...` - Run Go unit tests (including subpackages)
 - `go test -v -cover ./...` - Run Go unit tests with coverage
 - `go mod tidy` - Update dependencies
@@ -80,7 +80,7 @@ The server's listening port can be configured via an environment variable or a c
     ```
     For Docker:
     ```bash
-    docker run -p 80:8080 -e PORT=8080 go-spa-server
+    docker run -p 80:8081 -e PORT=8081 go-spa-server
     ```
 
 2.  **`.go-spa-server-config.json` File**: If a file named `.go-spa-server-config.json` exists, the `port` field within this JSON file will be used.
@@ -91,7 +91,7 @@ The server's listening port can be configured via an environment variable or a c
     }
     ```
 
-3.  **Default Port**: If neither the environment variable nor the configuration file specifies a port, the server defaults to `8080`.
+3.  **Default Port**: If neither the environment variable nor the configuration file specifies a port, the server defaults to `8081`.
 
 ## Testing
 

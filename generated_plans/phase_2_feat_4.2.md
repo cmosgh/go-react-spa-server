@@ -26,7 +26,7 @@ To add a `/healthz` endpoint to the Go SPA server, allowing container orchestrat
 
 5.  [x] **Verify Functionality (Manual/Local):**
     *   [x] Run the Go server locally.
-    *   [x] Access `http://localhost:8080/healthz` (or the configured port) in a browser or using `curl` to confirm it returns a `200 OK`.
+    *   [x] Access `http://localhost:8081/healthz` (or the configured port) in a browser or using `curl` to confirm it returns a `200 OK`.
 
 ## Success Criteria:
 - The `/healthz` endpoint is accessible and returns `200 OK`.
