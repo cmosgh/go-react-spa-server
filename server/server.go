@@ -1,34 +1,43 @@
 package server
 
 import (
+	"fmt" // Added import
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/NYTimes/gziphandler" // For gzip compression
 )
 
-func GetStaticDir() string {
-	staticDir := os.Getenv("STATIC_DIR")
-	if staticDir == "" {
-		staticDir = "./client/dist"
-	}
-	return staticDir
-}
+
 
 // StartServer encapsulates the server startup logic.
-func StartServer(addr string, handler http.Handler) error {
+func StartServer(config *Config, handler http.Handler) error {
+	addr := fmt.Sprintf(":%d", config.Port) // Construct address from config.Port
 	log.Printf("Listening on %s...", addr)
 	return http.ListenAndServe(addr, handler)
 }
 
-func SetupHandlers() http.Handler {
-	staticDir := GetStaticDir()
+func SetupHandlers() (http.Handler, *Config) {
+	config, err := LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading configuration: %v", err)
+	}
 
-	spaHandler := CreateSpaHandler(staticDir) // Use CreateSpaHandler from handlers package
+	// Log the static directory being used
+	if config.StaticDir == "" {
+		config.StaticDir = "./client/dist"
+		log.Printf("Using default static directory: %s", config.StaticDir)
+	} else {
+		log.Printf("Using static directory: %s", config.StaticDir)
+	}
+
+	// Log the SPA fallback file being used
+	log.Printf("Using SPA fallback file: %s", config.SpaFallbackFile)
+
+	spaHandler := CreateSpaHandler(config) // Use CreateSpaHandler from handlers package
 
 	// Apply caching middleware
-	cachedSPAHandler := CacheControlMiddleware(spaHandler) // Use CacheControlMiddleware from middleware package
+	cachedSPAHandler := CacheControlMiddleware(config)(spaHandler) // Use CacheControlMiddleware from middleware package
 
 	// Apply Brotli compression middleware (prioritized)
 	brotliCompressedHandler := BrotliHandler(cachedSPAHandler) // Use BrotliHandler from middleware package
@@ -36,5 +45,5 @@ func SetupHandlers() http.Handler {
 	// Apply Gzip compression middleware (fallback)
 	finalHandler := gziphandler.GzipHandler(brotliCompressedHandler)
 
-	return finalHandler
+	return finalHandler, config
 }

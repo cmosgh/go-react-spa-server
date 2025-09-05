@@ -21,15 +21,17 @@ func TestCacheControlMiddleware(t *testing.T) {
 	}
 	defer os.RemoveAll(tempStaticDir) // Clean up after test
 
-	// Temporarily set STATIC_DIR to the temporary directory for testing
-	os.Setenv("STATIC_DIR", tempStaticDir)
-	defer os.Unsetenv("STATIC_DIR") // Clean up after test
-
 	// Create a dummy favicon.ico in the temporary directory for testing generic static files
 	faviconPath := filepath.Join(tempStaticDir, "favicon.ico")
 	err = ioutil.WriteFile(faviconPath, []byte("dummy favicon content"), 0644)
 	if err != nil {
 		t.Fatalf("failed to create dummy favicon.ico: %v", err)
+	}
+
+	// Create a config for the middleware
+	cfg := &Config{
+		StaticDir: tempStaticDir,
+		SpaFallbackFile: "index.html",
 	}
 
 	// A dummy handler to pass to the middleware
@@ -65,7 +67,7 @@ func TestCacheControlMiddleware(t *testing.T) {
 		},
 		{
 			name:     "index.html path",
-			path:     "/index.html",
+			path:     "/" + cfg.SpaFallbackFile,
 			expected: "no-cache, no-store, must-revalidate",
 		},
 		{
@@ -85,7 +87,7 @@ func TestCacheControlMiddleware(t *testing.T) {
 			req := httptest.NewRequest("GET", tt.path, nil)
 			rr := httptest.NewRecorder()
 
-			handler := CacheControlMiddleware(dummyHandler)
+			handler := CacheControlMiddleware(cfg)(dummyHandler)
 			handler.ServeHTTP(rr, req)
 
 			cacheControl := rr.Header().Get("Cache-Control")
@@ -128,7 +130,7 @@ func TestCompression(t *testing.T) {
 		t.Fatalf("failed to create temporary file: %v", err)
 	}
 
-	handler := SetupHandlers() // Test the full handler chain
+	handler, _ := SetupHandlers() // Test the full handler chain
 
 	t.Run("should apply Brotli compression when Accept-Encoding is br", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/temp_large_file.txt", nil)

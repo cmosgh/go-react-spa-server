@@ -33,6 +33,69 @@ The Go server serves static files from `./client/dist` by default (configurable 
 - React app uses React Router for client-side routing
 - Static assets are served directly by Go's `http.FileServer`
 
+## Configuration
+
+### Static Directory Configuration
+
+The server serves static files from a configurable directory. The lookup order for the static directory is as follows:
+
+1.  **`STATIC_DIR` Environment Variable**: If set, this environment variable takes the highest precedence.
+    ```bash
+    STATIC_DIR=/path/to/your/static/files go run main.go
+    ```
+
+2.  **`.go-spa-server-config.json` File**: If a file named `.go-spa-server-config.json` exists in the current working directory, the `static_dir` field within this JSON file will be used.
+    Example `.go-spa-server-config.json`:
+    ```json
+    {
+      "static_dir": "./custom_static_build"
+    }
+    ```
+
+3.  **Default Path**: If neither the environment variable nor the configuration file specifies a static directory, the server defaults to serving files from `./client/dist`.
+
+### SPA Fallback File Configuration
+
+The server serves Single Page Applications (SPAs) by falling back to a specific HTML file (e.g., `index.html`) for client-side routes. You can customize this fallback file.
+
+1.  **`SPA_FALLBACK_FILE` Environment Variable**: If set, this environment variable specifies the name of the HTML file to use as the SPA fallback. This takes precedence over the configuration file.
+    ```bash
+    SPA_FALLBACK_FILE=app.html go run main.go
+    ```
+
+2.  **`.go-spa-server-config.json` File**: If a file named `.go-spa-server-config.json` exists, the `spa_fallback_file` field within this JSON file will be used.
+    Example `.go-spa-server-config.json`:
+    ```json
+    {
+      "spa_fallback_file": "app.html"
+    }
+    ```
+
+3.  **Default File**: If neither the environment variable nor the configuration file specifies a fallback file, the server defaults to `index.html`.
+
+### Configurable Port
+
+The server's listening port can be configured via an environment variable or a configuration file.
+
+1.  **`PORT` Environment Variable**: If set, this environment variable specifies the port on which the server will listen. This takes precedence over the configuration file.
+    ```bash
+    PORT=9000 go run main.go
+    ```
+    For Docker:
+    ```bash
+    docker run -p 80:8080 -e PORT=8080 go-react-spa-server
+    ```
+
+2.  **`.go-spa-server-config.json` File**: If a file named `.go-spa-server-config.json` exists, the `port` field within this JSON file will be used.
+    Example `.go-spa-server-config.json` with custom port:
+    ```json
+    {
+      "port": 9090
+    }
+    ```
+
+3.  **Default Port**: If neither the environment variable nor the configuration file specifies a port, the server defaults to `8080`.
+
 ## Testing
 
 This project includes both Go unit tests for the backend and Playwright end-to-end (e2e) tests for the full application.
