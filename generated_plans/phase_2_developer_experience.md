@@ -8,7 +8,7 @@
 - [x] **Implementation Steps:**
     - [x] **Configuration File Support:** Introduce support for a simple configuration file (e.g., `config.json` or `config.yaml`) that can define the static directory path. Environment variables should still take precedence.
     - [x] **Update `main.go`:** Modify the server initialization to read from the new configuration source.
-    - [ ] **Documentation:** Clearly document the new configuration options in the README.md.
+    - [x] **Documentation:** Clearly document the new configuration options in the README.md.
 
 ## Feature: Customizable SPA Fallback
 
