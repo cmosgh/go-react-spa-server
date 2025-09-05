@@ -108,3 +108,40 @@ func HSTSMiddleware(config *Config) func(http.Handler) http.Handler {
 		})
 	}
 }
+
+// SecurityHeadersMiddleware sets common security headers based on configuration.
+func SecurityHeadersMiddleware(config *Config) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Set X-Content-Type-Options header
+			if config.XContentTypeOptions != "" {
+				w.Header().Set("X-Content-Type-Options", config.XContentTypeOptions)
+			} else {
+				w.Header().Set("X-Content-Type-Options", "nosniff") // Default
+			}
+
+			// Set X-Frame-Options header
+			if config.XFrameOptions != "" {
+				w.Header().Set("X-Frame-Options", config.XFrameOptions)
+			} else {
+				w.Header().Set("X-Frame-Options", "DENY") // Default
+			}
+
+			// Set Referrer-Policy header
+			if config.ReferrerPolicy != "" {
+				w.Header().Set("Referrer-Policy", config.ReferrerPolicy)
+			} else {
+				w.Header().Set("Referrer-Policy", "no-referrer-when-downgrade") // Default
+			}
+
+			// Set Permissions-Policy header
+			if config.PermissionsPolicy != "" {
+				w.Header().Set("Permissions-Policy", config.PermissionsPolicy)
+			} else {
+				// Default: disable geolocation, microphone, camera
+				w.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
