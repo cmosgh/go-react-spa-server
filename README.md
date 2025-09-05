@@ -1,12 +1,11 @@
 ## Project Architecture
 
-This is a Go-React SPA (Single Page Application) server that combines:
+This is a Go SPA (Single Page Application) server that combines:
 
 - **Backend**: Go HTTP server (`main.go`) that serves static files and handles SPA routing
-- **Frontend**: React application built with Vite in the `client/` directory
-- **Testing**: Go unit tests (in `server/` directory) and Playwright e2e tests (`client/e2e/`)
+- **Frontend**: React application built with Vite in the `client/` directory (served via external volume at runtime)
 
-The Go server serves static files from `./client/dist` by default (configurable via `STATIC_DIR` env var) and falls back to `index.html` for client-side routes, implementing standard SPA behavior.
+The Go server serves static files from a configurable directory (via `STATIC_DIR` env var) and falls back to `index.html` for client-side routes, implementing standard SPA behavior. The Docker image for this server *only* contains the Go backend; the React frontend is expected to be mounted as an external volume at runtime.
 
 ## Development Commands
 
@@ -28,8 +27,6 @@ The Go server serves static files from `./client/dist` by default (configurable 
 ## Key Implementation Details
 
 - The Go server uses a custom SPA handler that checks file existence before deciding whether to serve static files or fall back to `index.html`
-- Client assets are built to `client/dist/` and served from there
-
 - React app uses React Router for client-side routing
 - Static assets are served directly by Go's `http.FileServer`
 
@@ -37,9 +34,9 @@ The Go server serves static files from `./client/dist` by default (configurable 
 
 ### Static Directory Configuration
 
-The server serves static files from a configurable directory. The lookup order for the static directory is as follows:
+The server serves static files from a configurable directory. This directory is where the mounted SPA static files are expected to reside. The lookup order for the static directory is as follows:
 
-1.  **`STATIC_DIR` Environment Variable**: If set, this environment variable takes the highest precedence.
+1.  **`STATIC_DIR` Environment Variable**: If set, this environment variable takes the highest precedence. This is particularly useful when mounting an external volume containing your SPA.
     ```bash
     STATIC_DIR=/path/to/your/static/files go run main.go
     ```
@@ -83,7 +80,7 @@ The server's listening port can be configured via an environment variable or a c
     ```
     For Docker:
     ```bash
-    docker run -p 80:8080 -e PORT=8080 go-react-spa-server
+    docker run -p 80:8080 -e PORT=8080 go-spa-server
     ```
 
 2.  **`.go-spa-server-config.json` File**: If a file named `.go-spa-server-config.json` exists, the `port` field within this JSON file will be used.
@@ -158,7 +155,13 @@ Alternatively, you can run the Playwright tests directly after building the clie
     cd ..
     ```
 
-### Docker
-- Build: `docker build -t go-react-spa-server .`
-- Run: `docker run -p 8080:8080 go-react-spa-server`
+## Optimized Docker Deployment
+
+An optimized Docker deployment strategy has been implemented for the Go SPA server. The Docker image now *only* contains the Go backend, resulting in a significantly smaller image size (currently **14.6MB**).
+
+The Single Page Application (SPA) is expected to be served from an external volume mounted at runtime, configured via the `STATIC_DIR` environment variable.
+
+For detailed instructions on building, pushing, and deploying the optimized Docker image, including Kubernetes examples with volume mounts, refer to: [`DEPLOYMENT.md`](./DEPLOYMENT.md)
+
+For a comprehensive end-to-end test plan to verify the Docker image with an attached SPA volume, refer to: [`generated_plans/phase_2_feat_4.1.md`](./generated_plans/phase_2_feat_4.1.md)
 

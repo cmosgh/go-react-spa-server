@@ -1,1 +1,39 @@
-client/
+# Git
+.git
+.gitignore
+
+# IDE and editor files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Build artifacts
+bin/
+pkg/
+*.o
+*.a
+*.so
+
+# Test results and temporary files
+test-results/
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Node.js and frontend build artifacts
+client/node_modules/
+client/dist/
+node_modules/ # In case there are any at the root
+
+# Go specific
+go-react-spa-server # The compiled binary
+
+# Documentation and generated files
+generated_plans/
+.mcp.json
+.claude/
+.gemini/

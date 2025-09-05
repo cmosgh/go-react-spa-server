@@ -1,50 +1,50 @@
-# Phase 2, Feature 4: Optimized Docker Deployment - Technical Solution
+# Phase 2, Feature 4: Optimized Docker Deployment - Technical Solution (Revised)
 
 ## Objective:
-To create an optimized Docker deployment strategy for the Go-React SPA server, focusing on generating the smallest possible Docker image suitable for Kubernetes and other container orchestration platforms. This includes proper documentation for building and deploying the Docker image.
+To create an optimized Docker deployment strategy for the Go server, focusing on generating the smallest possible Docker image suitable for Kubernetes and other container orchestration platforms. This image will *only* contain the Go backend. The Single Page Application (SPA) will be served from an external volume mounted at runtime, configured via an environment variable.
 
 ## Technical Steps:
 
-1.  [ ] **Analyze Existing Dockerfile:**
-    *   [ ] Examine the current `Dockerfile` located at `.Dockerfile`.
-    *   [ ] Identify areas for improvement, such as:
-        *   [ ] Base image selection.
-        *   [ ] Unnecessary files being copied into the image.
-        *   [ ] Lack of multi-stage build.
+1.  [x] **Analyze Existing Dockerfile:**
+    *   [x] Examine the current `Dockerfile` located at `.Dockerfile`.
+    *   [x] Identify areas for improvement, such as:
+        *   [x] Base image selection.
+        *   [x] Unnecessary files being copied into the image.
+        *   [x] Lack of multi-stage build.
+        *   [x] **Crucially, remove any steps related to building or copying the React frontend.**
 
-2.  [ ] **Implement Multi-stage Build:**
-    *   [ ] **Build Stage:**
-        *   [ ] Use a larger, build-friendly image (e.g., `golang:latest` or `golang:alpine`) for compiling the Go application and building the React frontend.
-        *   [ ] Copy `go.mod` and `go.sum` first, then `go get` dependencies to leverage Docker layer caching.
-        *   [ ] Copy the Go source code and build the Go binary, ensuring it's statically linked (`CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .`).
-        *   [ ] For the React frontend, navigate to the `client` directory, install npm dependencies, and run the build command (`npm run build`).
-    *   [ ] **Final (Runtime) Stage:**
-        *   [ ] Use a minimal base image (e.g., `scratch` for the Go binary, or `alpine` if static assets need to be served by a web server like Nginx, or if the Go binary needs some libc dependencies). For this project, since the Go server serves static files, `alpine` is a good compromise.
-        *   [ ] Copy *only* the compiled Go binary from the build stage.
-        *   [ ] Copy *only* the built React static assets from the build stage into the appropriate directory within the final image (e.g., `/app/static`).
-        *   [ ] Set the entry point to run the Go binary.
+2.  [x] **Implement Multi-stage Build (Go Backend Only):**
+    *   [x] **Build Stage:**
+        *   [x] Use a larger, build-friendly image (e.g., `golang:latest` or `golang:alpine`) for compiling the Go application.
+        *   [x] Copy `go.mod` and `go.sum` first, then `go get` dependencies to leverage Docker layer caching.
+        *   [x] Copy the Go source code and build the Go binary, ensuring it's statically linked (`CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .`).
+    *   [x] **Final (Runtime) Stage:**
+        *   [x] Use a minimal base image (e.g., `scratch` or `alpine`).
+        *   [x] Copy *only* the compiled Go binary from the build stage.
+        *   [x] Set the entry point to run the Go binary.
 
-3.  [ ] **Optimize Go Build for Docker:**
-    *   [ ] Ensure `CGO_ENABLED=0` is set during the Go build process to create a statically linked binary, which can then be run on a `scratch` or `alpine` image without external C dependencies.
-    *   [ ] Use `go build -ldflags "-s -w"` to strip debug information and symbol tables, further reducing the binary size.
+3.  [x] **Optimize Go Build for Docker:**
+    *   [x] Ensure `CGO_ENABLED=0` is set during the Go build process to create a statically linked binary, which can then be run on a `scratch` or `alpine` image without external C dependencies.
+    *   [x] Use `go build -ldflags "-s -w"` to strip debug information and symbol tables, further reducing the binary size.
 
-4.  [ ] **Update `.dockerignore`:**
-    *   [ ] Add entries to `.dockerignore` to prevent unnecessary files (e.g., `node_modules` from the root, `.git`, `.idea`, `test-results`, `generated_plans`) from being copied into the build context, speeding up Docker builds.
+4.  [x] **Update `.dockerignore`:**
+    *   [x] Add entries to `.dockerignore` to prevent unnecessary files (e.g., `node_modules` from the root, `.git`, `.idea`, `test-results`, `generated_plans`, and *all client-side code*) from being copied into the build context, speeding up Docker builds.
 
-5.  [ ] **Document Dockerfile:**
-    *   [ ] Add clear, concise comments within the `Dockerfile` explaining each stage, command, and the rationale behind specific optimizations (e.g., why `CGO_ENABLED=0` is used).
+5.  [x] **Document Dockerfile:**
+    *   [x] Add clear, concise comments within the `Dockerfile` explaining each stage, command, and the rationale behind specific optimizations.
 
-6.  [ ] **Create Deployment Documentation:**
-    *   [ ] Create a new `DEPLOYMENT.md` file in the project root.
-    *   [ ] **Building the Docker Image:** Provide step-by-step instructions on how to build the optimized Docker image, including the `docker build` command with appropriate tags.
-    *   [ ] **Pushing to a Registry:** Explain how to tag the image and push it to a Docker registry (e.g., Docker Hub, Google Container Registry, AWS ECR).
-    *   [ ] **Kubernetes Deployment Example:**
-        *   [ ] Provide a basic Kubernetes Deployment YAML example.
-        *   [ ] Include a Service YAML for exposing the application.
-        *   [ ] Explain how to apply these YAMLs using `kubectl`.
-        *   [ ] Mention considerations for production deployments (e.g., Ingress, Persistent Volumes if applicable, resource limits, readiness/liveness probes).
-    *   [ ] **Other Container Platforms:** Briefly mention deployment to other platforms like Docker Swarm or standalone Docker, if relevant.
+6.  [x] **Create Deployment Documentation:**
+    *   [x] Create or update `DEPLOYMENT.md` in the project root.
+    *   [x] **Building the Docker Image:** Provide step-by-step instructions on how to build the optimized Docker image (Go backend only).
+    *   [x] **Pushing to a Registry:** Explain how to tag the image and push it to a Docker registry.
+    *   [x] **Kubernetes Deployment Example:**
+        *   [x] Provide a basic Kubernetes Deployment YAML example.
+        *   [x] Include a Service YAML for exposing the application.
+        *   [x] **Crucially, demonstrate how to mount an external volume for the SPA static files and how to configure the Go server to use this volume (e.g., via `STATIC_DIR` environment variable).**
+        *   [x] Explain how to apply these YAMLs using `kubectl`.
+        *   [x] Mention considerations for production deployments.
+    *   [x] **Other Container Platforms:** Briefly mention deployment to other platforms.
 
-7.  [ ] **Verify Image Size:**
-    *   [ ] After implementing the changes, run `docker images` to compare the size of the new optimized image with the previous one.
-    *   [ ] Include the size comparison in the `DEPLOYMENT.md` to highlight the optimization benefits.
+7.  [x] **Verify Image Size:**
+    *   [x] After implementing the changes, run `docker images` to compare the size of the new optimized image (Go backend only).
+    *   [x] Include the size comparison in the `DEPLOYMENT.md` to highlight the optimization benefits.
