@@ -39,8 +39,14 @@ func SetupHandlers() (http.Handler, *Config) {
 	// Apply caching middleware
 	cachedSPAHandler := CacheControlMiddleware(config)(spaHandler) // Use CacheControlMiddleware from middleware package
 
+	// Apply CSP middleware
+	cspHandler := CSPMiddleware(config)(cachedSPAHandler)
+
+	// Apply HSTS middleware
+	hstsHandler := HSTSMiddleware(config)(cspHandler)
+
 	// Apply Brotli compression middleware (prioritized)
-	brotliCompressedHandler := BrotliHandler(cachedSPAHandler) // Use BrotliHandler from middleware package
+	brotliCompressedHandler := BrotliHandler(hstsHandler) // Use BrotliHandler from middleware package
 
 	// Apply Gzip compression middleware (fallback)
 	finalHandler := gziphandler.GzipHandler(brotliCompressedHandler)

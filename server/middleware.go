@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -81,4 +82,29 @@ func BrotliHandler(next http.Handler) http.Handler {
 		brw := &brotliResponseWriter{ResponseWriter: w, brotliWriter: brWriter}
 		next.ServeHTTP(brw, r)
 	})
+}
+
+// CSPMiddleware sets the Content-Security-Policy header if configured.
+func CSPMiddleware(config *Config) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if config.CSPHeader != "" {
+				w.Header().Set("Content-Security-Policy", config.CSPHeader)
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// HSTSMiddleware sets the Strict-Transport-Security header if configured and the connection is HTTPS.
+func HSTSMiddleware(config *Config) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Only set HSTS header if max-age is configured and the connection is HTTPS
+			if config.HSTSMaxAge > 0 && r.TLS != nil {
+				w.Header().Set("Strict-Transport-Security", fmt.Sprintf("max-age=%d; includeSubDomains", config.HSTSMaxAge))
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }

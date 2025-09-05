@@ -13,6 +13,8 @@ type Config struct {
 	StaticDir       string `json:"static_dir"`
 	SpaFallbackFile string `json:"spa_fallback_file"`
 	Port            int    `json:"port"`
+	CSPHeader       string `json:"csp_header"`
+	HSTSMaxAge      int    `json:"hsts_max_age"`
 }
 
 // LoadConfig loads the configuration from environment variables and a .go-spa-server-config.json file.
@@ -20,7 +22,7 @@ type Config struct {
 func LoadConfig() (*Config, error) {
 	config := &Config{
 		SpaFallbackFile: "index.html", // Default fallback file
-		Port:            8080,         // Default port
+		Port:            8081,         // Default port
 	}
 
 	// Load from config file if it exists
@@ -51,11 +53,22 @@ func LoadConfig() (*Config, error) {
 		config.Port = p
 	}
 
-	// Basic validation for SpaFallbackFile
-	if config.SpaFallbackFile == "" || strings.ContainsAny(config.SpaFallbackFile, "/\\") {
+	// Load CSPHeader from environment variable
+	if cspHeaderEnv := os.Getenv("CSP_HEADER"); cspHeaderEnv != "" {
+		config.CSPHeader = cspHeaderEnv
+	}
 
-		
-		
+	// Load HSTSMaxAge from environment variable
+	if hstsMaxAgeEnv := os.Getenv("HSTS_MAX_AGE"); hstsMaxAgeEnv != "" {
+		h, err := strconv.Atoi(hstsMaxAgeEnv)
+		if err != nil {
+			return nil, fmt.Errorf("invalid HSTS_MAX_AGE environment variable: %s", hstsMaxAgeEnv)
+		}
+		config.HSTSMaxAge = h
+	}
+
+	// Basic validation for SpaFallbackFile
+	if config.SpaFallbackFile == "" || strings.ContainsAny(config.SpaFallbackFile, "/") {
 		return nil, fmt.Errorf("invalid SPA_FALLBACK_FILE: %s", config.SpaFallbackFile)
 	}
 
