@@ -2,33 +2,51 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
 )
 
 // Config represents the application configuration.
 type Config struct {
-	StaticDir string `json:"static_dir"`
+	StaticDir     string `json:"static_dir"`
+	SpaFallbackFile string `json:"spa_fallback_file"`
 }
 
-// LoadConfig loads the configuration from a .go-spa-server-config.json file.
-// It searches for the file in the current working directory.
+// LoadConfig loads the configuration from environment variables and a .go-spa-server-config.json file.
+// Environment variables take precedence over the config file.
 func LoadConfig() (*Config, error) {
+	config := &Config{
+		SpaFallbackFile: "index.html", // Default fallback file
+	}
+
+	// Load from config file if it exists
 	configPath := ".go-spa-server-config.json"
-	
-	// Check if the file exists
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, nil // File does not exist, return nil config and no error
+	if _, err := os.Stat(configPath); err == nil {
+		data, err := os.ReadFile(configPath)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(data, config); err != nil {
+			return nil, err
+		}
 	}
 
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, err
+	// Override with environment variables
+	if staticDirEnv := os.Getenv("STATIC_DIR"); staticDirEnv != "" {
+		config.StaticDir = staticDirEnv
+	}
+	if spaFallbackFileEnv := os.Getenv("SPA_FALLBACK_FILE"); spaFallbackFileEnv != "" {
+		config.SpaFallbackFile = spaFallbackFileEnv
 	}
 
-	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, err
+	// Basic validation for SpaFallbackFile
+	if config.SpaFallbackFile == "" || strings.ContainsAny(config.SpaFallbackFile, "/\\") {
+
+		
+		
+		return nil, fmt.Errorf("invalid SPA_FALLBACK_FILE: %s", config.SpaFallbackFile)
 	}
 
-	return &config, nil
+	return config, nil
 }

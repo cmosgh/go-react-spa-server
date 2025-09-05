@@ -34,6 +34,11 @@ func TestInMemoryCaching(t *testing.T) {
 	}
 	defer os.RemoveAll(tempStaticDir) // Clean up after test
 
+	cfg := &Config{
+		StaticDir: tempStaticDir,
+		SpaFallbackFile: "index.html",
+	}
+
 	// Create dummy index.html and vite.svg in the temporary directory
 	dummyIndexHTMLPath := filepath.Join(tempStaticDir, "index.html")
 	err = ioutil.WriteFile(dummyIndexHTMLPath, []byte("<html><head><title>Test Index</title></head><body></body></html>"), 0644)
@@ -58,7 +63,7 @@ func TestInMemoryCaching(t *testing.T) {
 			}
 		}()
 
-		err := LoadCriticalAssetsIntoCache(tempStaticDir) // Pass temp dir
+		err := LoadCriticalAssetsIntoCache(cfg.StaticDir) // Pass temp dir
 		if err != nil {
 			t.Fatalf("loadCriticalAssetsIntoCache failed: %v", err)
 		}
@@ -140,9 +145,9 @@ func TestInMemoryCaching(t *testing.T) {
 
 	t.Run("createSpaHandler serves index.html from cache", func(t *testing.T) {
 		// Ensure cache is populated
-		LoadCriticalAssetsIntoCache(tempStaticDir)
+		LoadCriticalAssetsIntoCache(cfg.StaticDir)
 
-		handler := CreateSpaHandler(tempStaticDir)
+		handler := CreateSpaHandler(cfg)
 		req := httptest.NewRequest("GET", "/index.html", nil)
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
@@ -166,9 +171,9 @@ func TestInMemoryCaching(t *testing.T) {
 
 	t.Run("createSpaHandler serves vite.svg from cache", func(t *testing.T) {
 		// Ensure cache is populated
-		LoadCriticalAssetsIntoCache(tempStaticDir)
+		LoadCriticalAssetsIntoCache(cfg.StaticDir)
 
-		handler := CreateSpaHandler(tempStaticDir)
+		handler := CreateSpaHandler(cfg)
 		req := httptest.NewRequest("GET", "/vite.svg", nil)
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
@@ -191,8 +196,8 @@ func TestInMemoryCaching(t *testing.T) {
 	})
 
 	t.Run("createSpaHandler returns 304 for cached index.html with ETag match", func(t *testing.T) {
-		LoadCriticalAssetsIntoCache(tempStaticDir)
-		handler := CreateSpaHandler(tempStaticDir)
+		LoadCriticalAssetsIntoCache(cfg.StaticDir)
+		handler := CreateSpaHandler(cfg)
 
 		// First request to get ETag
 		req1 := httptest.NewRequest("GET", "/index.html", nil)
@@ -218,8 +223,8 @@ func TestInMemoryCaching(t *testing.T) {
 	})
 
 	t.Run("createSpaHandler returns 304 for cached vite.svg with If-Modified-Since match", func(t *testing.T) {
-		LoadCriticalAssetsIntoCache(tempStaticDir)
-		handler := CreateSpaHandler(tempStaticDir)
+		LoadCriticalAssetsIntoCache(cfg.StaticDir)
+		handler := CreateSpaHandler(cfg)
 
 		// First request to get Last-Modified
 		req1 := httptest.NewRequest("GET", "/vite.svg", nil)

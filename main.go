@@ -8,14 +8,12 @@ import (
 )
 
 func runApp() error {
-	staticDir := server.GetStaticDir() // Use GetStaticDir from server package
-
-	if err := server.LoadCriticalAssetsIntoCache(staticDir); err != nil {
+	if err := server.LoadCriticalAssetsIntoCache(config.StaticDir); err != nil {
 		log.Printf("Error loading critical assets into cache: %v", err)
 		// Continue, as it's not a fatal error if assets are served from disk
 	}
 
-	finalHandler := server.SetupHandlers() // Use SetupHandlers from server package
+	finalHandler, config := server.SetupHandlers() // Use SetupHandlers from server package
 	http.Handle("/", finalHandler)
 	return server.StartServer(":8080", nil) // Use StartServer from server package
 }

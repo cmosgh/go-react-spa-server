@@ -12,11 +12,11 @@
 
 ## Feature: Customizable SPA Fallback
 
-- [ ] **Description:** Allow users to specify a different fallback file than `index.html` (e.g., `app.html`) if their Vite application uses a non-standard entry point.
-- [ ] **Implementation Steps:**
-    - [ ] **Configuration Option:** Add a new configuration option (e.g., `SPA_FALLBACK_FILE` environment variable or in the config file) to specify the fallback HTML file name.
-    - [ ] **Update SPA Handler:** Modify the SPA handler logic to use the configured fallback file instead of hardcoding `index.html`.
-    - [ ] **Documentation:** Document this new configuration option in the `README.md`.
+- [x] **Description:** Allow users to specify a different fallback file than `index.html` (e.g., `app.html`) if their Vite application uses a non-standard entry point.
+- [x] **Implementation Steps:**
+    - [x] **Configuration Option:** Add a new configuration option (e.g., `SPA_FALLBACK_FILE` environment variable or in the config file) to specify the fallback HTML file name.
+    - [x] **Update SPA Handler:** Modify the SPA handler logic to use the configured fallback file instead of hardcoding `index.html`.
+    - [x] **Documentation:** Document this new configuration option in the `README.md`.
 
 ## Feature: Configurable Port via Environment Variable
 

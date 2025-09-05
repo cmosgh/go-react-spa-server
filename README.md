@@ -54,6 +54,25 @@ The server serves static files from a configurable directory. The lookup order f
 
 3.  **Default Path**: If neither the environment variable nor the configuration file specifies a static directory, the server defaults to serving files from `./client/dist`.
 
+### SPA Fallback File Configuration
+
+The server serves Single Page Applications (SPAs) by falling back to a specific HTML file (e.g., `index.html`) for client-side routes. You can customize this fallback file.
+
+1.  **`SPA_FALLBACK_FILE` Environment Variable**: If set, this environment variable specifies the name of the HTML file to use as the SPA fallback. This takes precedence over the configuration file.
+    ```bash
+    SPA_FALLBACK_FILE=app.html go run main.go
+    ```
+
+2.  **`.go-spa-server-config.json` File**: If a file named `.go-spa-server-config.json` exists, the `spa_fallback_file` field within this JSON file will be used.
+    Example `.go-spa-server-config.json`:
+    ```json
+    {
+      "spa_fallback_file": "app.html"
+    }
+    ```
+
+3.  **Default File**: If neither the environment variable nor the configuration file specifies a fallback file, the server defaults to `index.html`.
+
 ## Testing
 
 This project includes both Go unit tests for the backend and Playwright end-to-end (e2e) tests for the full application.

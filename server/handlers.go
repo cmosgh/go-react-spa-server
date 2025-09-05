@@ -10,14 +10,14 @@ import (
 
 // CreateSpaHandler creates an http.Handler that serves static files
 // and falls back to index.html for client-side routes.
-func CreateSpaHandler(staticDir string) http.Handler {
-	fs := http.FileServer(http.Dir(staticDir))
+func CreateSpaHandler(config *Config) http.Handler {
+	fs := http.FileServer(http.Dir(config.StaticDir))
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Try to serve from in-memory cache first
 		cachePath := r.URL.Path
 		if cachePath == "/" {
-			cachePath = "/index.html"
+			cachePath = "/" + config.SpaFallbackFile
 		}
 		if cachedAsset, ok := GetCachedAsset(cachePath); ok { // Use GetCachedAsset from cache package
 			// Set Content-Type
@@ -53,13 +53,13 @@ func CreateSpaHandler(staticDir string) http.Handler {
 		}
 
 		// Original logic for serving from disk if not in cache
-		requestedPath := filepath.Join(staticDir, r.URL.Path)
+		requestedPath := filepath.Join(config.StaticDir, r.URL.Path)
 		serveFilePath := requestedPath // Assume requested path initially
 
 		// Check if the requested file exists, otherwise fallback to index.html
 		_, err := os.Stat(requestedPath)
-		if os.IsNotExist(err) {
-			serveFilePath = filepath.Join(staticDir, "index.html")
+		if os.IsNotExist(err) || (r.URL.Path == "/" && config.SpaFallbackFile != "index.html") {
+			serveFilePath = filepath.Join(config.StaticDir, config.SpaFallbackFile)
 		}
 
 		// Get file info for ETag and Last-Modified
