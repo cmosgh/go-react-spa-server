@@ -43,8 +43,11 @@ func SetupHandlers() (http.Handler, *Config) {
 	// Apply HSTS middleware
 	hstsHandler := HSTSMiddleware(config)(cspHandler)
 
+	// Apply Security Headers middleware
+	securityHeadersHandler := SecurityHeadersMiddleware(config)(hstsHandler)
+
 	// Apply Brotli compression middleware (prioritized)
-	brotliCompressedHandler := BrotliHandler(hstsHandler) // Use BrotliHandler from middleware package
+	brotliCompressedHandler := BrotliHandler(securityHeadersHandler) // Use BrotliHandler from middleware package
 
 	// Apply Gzip compression middleware (fallback)
 	finalHandler := gziphandler.GzipHandler(brotliCompressedHandler)

@@ -14,7 +14,11 @@ type Config struct {
 	SpaFallbackFile string `json:"spa_fallback_file"`
 	Port            int    `json:"port"`
 	CSPHeader       string `json:"csp_header"`
-	HSTSMaxAge      int    `json:"hsts_max_age"`
+	HSTSMaxAge          int    `json:"hsts_max_age"`
+	XContentTypeOptions string `json:"x_content_type_options"`
+	XFrameOptions       string `json:"x_frame_options"`
+	ReferrerPolicy      string `json:"referrer_policy"`
+	PermissionsPolicy   string `json:"permissions_policy"`
 }
 
 // LoadConfig loads the configuration from environment variables and a .go-spa-server-config.json file.
@@ -65,6 +69,26 @@ func LoadConfig() (*Config, error) {
 			return nil, fmt.Errorf("invalid HSTS_MAX_AGE environment variable: %s", hstsMaxAgeEnv)
 		}
 		config.HSTSMaxAge = h
+	}
+
+	// Load XContentTypeOptions from environment variable
+	if xContentTypeOptionsEnv := os.Getenv("X_CONTENT_TYPE_OPTIONS"); xContentTypeOptionsEnv != "" {
+		config.XContentTypeOptions = xContentTypeOptionsEnv
+	}
+
+	// Load XFrameOptions from environment variable
+	if xFrameOptionsEnv := os.Getenv("X_FRAME_OPTIONS"); xFrameOptionsEnv != "" {
+		config.XFrameOptions = xFrameOptionsEnv
+	}
+
+	// Load ReferrerPolicy from environment variable
+	if referrerPolicyEnv := os.Getenv("REFERRER_POLICY"); referrerPolicyEnv != "" {
+		config.ReferrerPolicy = referrerPolicyEnv
+	}
+
+	// Load PermissionsPolicy from environment variable
+	if permissionsPolicyEnv := os.Getenv("PERMISSIONS_POLICY"); permissionsPolicyEnv != "" {
+		config.PermissionsPolicy = permissionsPolicyEnv
 	}
 
 	// Basic validation for SpaFallbackFile
