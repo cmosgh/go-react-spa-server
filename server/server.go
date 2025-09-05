@@ -45,5 +45,10 @@ func SetupHandlers() (http.Handler, *Config) {
 	// Apply Gzip compression middleware (fallback)
 	finalHandler := gziphandler.GzipHandler(brotliCompressedHandler)
 
-	return finalHandler, config
+	// Create a new ServeMux to handle multiple routes
+	mux := http.NewServeMux()
+	mux.Handle("/healthz", http.HandlerFunc(HealthzHandler))
+	mux.Handle("/", finalHandler) // All other requests go to the SPA handler
+
+	return mux, config
 }

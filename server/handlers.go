@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+// HealthzHandler returns a 200 OK for health checks.
+func HealthzHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}
+
 // CreateSpaHandler creates an http.Handler that serves static files
 // and falls back to index.html for client-side routes.
 func CreateSpaHandler(config *Config) http.Handler {

@@ -83,18 +83,18 @@ spec:
         #   requests:
         #     cpu: "200m"
         #     memory: "128Mi"
-        # livenessProbe:
-        #   httpGet:
-        #     path: /healthz # Assuming a health check endpoint
-        #     port: 8080
-        #   initialDelaySeconds: 10
-        #   periodSeconds: 5
-        # readinessProbe:
-        #   httpGet:
-        #     path: /healthz
-        #     port: 8080
-        #   initialDelaySeconds: 5
-        #   periodSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 3
 ```
 
 ### `service.yaml`
@@ -121,7 +121,11 @@ kubectl apply -f deployment.yaml
 kubectl apply -f service.yaml
 ```
 
-## 4. Verify Image Size
+## 4. Health Checks
+
+The Go SPA server includes a `/healthz` endpoint for health checks. This endpoint returns a `200 OK` status when the server is running and responsive. It can be used by container orchestration platforms like Kubernetes for `livenessProbe` and `readinessProbe` configurations to ensure the application is healthy and ready to receive traffic.
+
+## 5. Verify Image Size
 
 After building the image, you can check its size using:
 
@@ -131,6 +135,6 @@ docker images go-spa-server:latest
 
 **Expected Optimization:** The multi-stage build significantly reduces the final image size by only including the necessary runtime components (the Go backend). This image will be much smaller than one that includes the React frontend.
 
-## 5. Other Container Platforms
+## 6. Other Container Platforms
 
 The Docker image can also be deployed to other container platforms such as Docker Swarm, Amazon ECS, Google Cloud Run, or Azure Container Instances. The deployment process will vary depending on the platform but will generally involve building the image, pushing it to a registry, and then configuring the platform to pull and run the image, ensuring to mount the SPA static files as an external volume.
