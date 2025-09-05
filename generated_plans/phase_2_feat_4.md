@@ -6,7 +6,7 @@ To create an optimized Docker deployment strategy for the Go-React SPA server, f
 ## Technical Steps:
 
 1.  [ ] **Analyze Existing Dockerfile:**
-    *   [ ] Examine the current `Dockerfile` located at `/Users/moshu/development/pdfthumbnailpro/go-react-spa-server/Dockerfile`.
+    *   [ ] Examine the current `Dockerfile` located at `.Dockerfile`.
     *   [ ] Identify areas for improvement, such as:
         *   [ ] Base image selection.
         *   [ ] Unnecessary files being copied into the image.
