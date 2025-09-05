@@ -29,12 +29,13 @@
 
 ## Feature: Optimized Docker Deployment
 
-- [ ] **Description:** Create an optimized Docker deployment strategy for the Go-React SPA server, focusing on generating the smallest possible Docker image suitable for Kubernetes and other container orchestration platforms. This includes proper documentation for building and deploying the Docker image.
+- [ ] **Description:** Create an optimized Docker deployment strategy for the Go server, focusing on generating the smallest possible Docker image suitable for Kubernetes and other container orchestration platforms. This image will *only* contain the Go backend, and the SPA will be served from an external volume mounted at runtime, configured via an environment variable.
 - [ ] **Implementation Steps:**
-    - [ ] **Review Dockerfile:** Analyze the existing `Dockerfile` for potential optimizations (e.g., multi-stage builds, smaller base images, removing unnecessary files).
-    - [ ] **Implement Multi-stage Build:** Refactor the `Dockerfile` to use multi-stage builds to separate build-time dependencies from runtime dependencies, significantly reducing the final image size.
+    - [ ] **Review Dockerfile:** Analyze the existing `Dockerfile` for potential optimizations (e.g., multi-stage builds, smaller base images, removing unnecessary files), ensuring it *only* builds the Go backend.
+    - [ ] **Implement Multi-stage Build (Go Only):** Refactor the `Dockerfile` to use multi-stage builds to separate build-time dependencies from runtime dependencies for the Go application, significantly reducing the final image size.
     - [ ] **Choose Minimal Base Image:** Select a minimal base image for the final stage (e.g., `scratch` or `alpine`) to further reduce the image footprint.
     - [ ] **Optimize Go Build:** Ensure the Go application is built with optimizations for size and static linking within the Docker environment.
+    - [ ] **Ensure Configurable Static Path:** Verify that the Go server can serve static files from a path configured via an environment variable (e.g., `STATIC_DIR`), allowing for external volume mounts.
     - [ ] **Document Dockerfile:** Add comments to the `Dockerfile` explaining each step and its purpose.
-    - [ ] **Create Deployment Documentation:** Develop comprehensive documentation (e.g., in `README.md` or a new `DEPLOYMENT.md`) detailing how to build the Docker image, push it to a registry, and deploy it to Kubernetes or other container platforms, including example YAML configurations.
-    - [ ] **Verify Image Size:** Measure and report the size of the optimized Docker image.
+    - [ ] **Create Deployment Documentation:** Develop comprehensive documentation (e.g., in `README.md` or a new `DEPLOYMENT.md`) detailing how to build the Docker image, push it to a registry, and deploy it to Kubernetes or other container platforms, including example YAML configurations that demonstrate mounting the SPA as a volume.
+    - [ ] **Verify Image Size:** Measure and report the size of the optimized Docker image (Go backend only).
