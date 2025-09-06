@@ -35,3 +35,33 @@ test('homepage has "I AM HERE TO WORK FOR YOU" and a link to google', async ({ p
   await homeLink.click();
   await expect(page.locator('p').getByText('I AM HERE TO WORK FOR YOU')).toBeVisible();
 });
+
+test('non-existent path falls back to index.html and loads SPA', async ({ page }) => {
+  await page.goto('http://localhost:8081/this-path-does-not-exist');
+
+  // Ensure the SPA has time to render
+  await page.waitForSelector('nav', { state: 'visible', timeout: 10000 });
+
+  // Expect the page title to still be from the SPA's index.html
+  await expect(page).toHaveTitle(/Vite \+ React/);
+
+  // Expect a key element from the SPA to be visible, confirming it loaded
+  await expect(page.locator('p').getByText('I AM HERE TO WORK FOR YOU')).toBeVisible();
+});
+
+test('static asset (horse.webp) is served correctly via network interception', async ({ page }) => {
+  // Navigate to the homepage
+  await page.goto('http://localhost:8081/');
+
+  // Wait for the response of the horse.webp image
+  // The regex `/\/assets\/horse-.*\.webp/` will match the dynamically hashed filename
+  const response = await page.waitForResponse(response =>
+    response.url().match(/.\/assets\/horse-.*\.webp/) && response.request().resourceType() === 'image'
+  );
+
+  // Expect the response status to be 200 OK
+  expect(response.status()).toBe(200);
+
+  // Optionally, check content type
+  expect(response.headers()['content-type']).toContain('image/webp');
+});
