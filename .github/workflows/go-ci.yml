@@ -29,6 +29,17 @@ jobs:
         go test -v -coverprofile=coverage.out ./...
         go tool cover -html=coverage.out -o coverage.html
 
+    - name: Display Go Coverage Summary
+      run: |
+        # Generate a functional coverage report and extract the total percentage
+        COVERAGE_PERCENTAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+        
+        # Output the coverage percentage to the GitHub Actions summary
+        echo "### Go Code Coverage" >> $GITHUB_STEP_SUMMARY
+        echo "Total Coverage: **${COVERAGE_PERCENTAGE}**" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "For a detailed report, download the 'go-coverage-report' artifact and open 'coverage.html'." >> $GITHUB_STEP_SUMMARY
+
     - name: Upload Coverage Report Artifact
       uses: actions/upload-artifact@v4
       with:
