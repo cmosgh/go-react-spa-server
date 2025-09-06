@@ -25,13 +25,17 @@ jobs:
       run: go build -v ./...
 
     - name: Run Go Tests and Generate Coverage
-      run: go test -v -coverprofile=coverage.out ./...
+      run: |
+        go test -v -coverprofile=coverage.out ./...
+        go tool cover -html=coverage.out -o coverage.html
 
     - name: Upload Coverage Report Artifact
       uses: actions/upload-artifact@v4
       with:
         name: go-coverage-report
-        path: coverage.out
+        path: |
+          coverage.out
+          coverage.html
 
   e2e-test:
     runs-on: ubuntu-latest
